@@ -2,7 +2,7 @@
 
 状态：实施基线。更新日期：2026-10-03。
 
-Agent Base 是通用工程基建，服务于开发者和编码 Agent；通过公共 npm 包 @luigi/tools 分发，不依赖维护者本机配置或私有工作区。目标是把经过验证的组件、工作流程和项目约定复用到独立产品中，减少重复搭建和返工。本仓库采用轻量 Monorepo，优先用 TypeScript 实现 JavaScript 生态内的代码；MVP 交付统一 CLI、Skills、UI 组件、GitHub 管理预设和业务项目模板。所有项目初始化与资产安装都通过该 CLI 进入。
+Agent Base 是通用工程基建，服务于开发者和编码 Agent；通过公共 npm 包 @luigix/tools 分发，不依赖维护者本机配置或私有工作区。目标是把经过验证的组件、工作流程和项目约定复用到独立产品中，减少重复搭建和返工。本仓库采用轻量 Monorepo，优先用 TypeScript 实现 JavaScript 生态内的代码；MVP 交付统一 CLI、Skills、UI 组件、GitHub 管理预设和业务项目模板。所有项目初始化与资产安装都通过该 CLI 进入。
 
 ## 目标与边界
 
@@ -152,9 +152,9 @@ init 已组合现有安装能力，并与独立安装共享文件事务。插件
 
 ## 公共 npm 分发
 
-包名 @luigi/tools，bin 名为 lt。发布后用户无需克隆仓库，可直接 npx @luigi/tools 或 npm install -g @luigi/tools。包中只包含编译后的 CLI、内置目录与使用说明，消费者不需要 pnpm 或 tsx。仓库使用 pnpm 不限制消费者的 npm/yarn/pnpm 选择。
+包名 @luigix/tools，bin 名为 lt。发布后用户无需克隆仓库，可直接 npx @luigix/tools 或 npm install -g @luigix/tools。包中只包含编译后的 CLI、内置目录与使用说明，消费者不需要 pnpm 或 tsx。仓库使用 pnpm 不限制消费者的 npm/yarn/pnpm 选择。
 
-发布前必须通过仓库外 npm 打包安装验证。公开包的版本与内置目录版本保持一致，发布不与构建混在一起执行。当前不自动发布；需明确授权及 @luigi scope 的发布权限。
+发布前必须通过仓库外 npm 打包安装验证。公开包的版本与内置目录版本保持一致，发布不与构建混在一起执行。当前不自动发布；需明确授权及 @luigix scope 的发布权限。
 
 ## 官方资料与决策依据
 

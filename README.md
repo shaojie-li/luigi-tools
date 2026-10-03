@@ -1,6 +1,6 @@
 # Agent Base
 
-面向开发者和编码 Agent 的可复用工程基建。对外通过 @luigi/tools 提供唯一资产入口，既支持终端交互选择，也支持完整命令和 JSON 输出。
+面向开发者和编码 Agent 的可复用工程基建。对外通过 @luigix/tools 提供唯一资产入口，既支持终端交互选择，也支持完整命令和 JSON 输出。
 
 架构基线见 [架构文档](docs/architecture.md)，协议和命令见 [CLI 文档](docs/cli.md)，代码与提交约定见 [编码规范](docs/coding-standards.md)。资产包含 TypeScript CLI、4 个 Skills、3 个 UI 组件、GitHub Projects 和代码质量预设，以及一个 React 业务模板。
 
@@ -31,9 +31,9 @@ init 的新目录父目录必须存在。生成项目后，在该项目内执行
 ## 发布后的使用方式
 
 ```bash
-npx @luigi/tools
-npx @luigi/tools init business-web --cwd ./my-app --agent codex
-npm install -g @luigi/tools
+npx @luigix/tools
+npx @luigix/tools init business-web --cwd ./my-app --agent codex
+npm install -g @luigix/tools
 lt list
 ```
 
@@ -64,3 +64,5 @@ CLI 运行时依赖仅用于参数、交互与数据验证；源码分发目录�
 已有项目可用 `lt add preset code-quality` 安装规范文件，再执行 `npx tsx tooling/setup-project.ts` 安全补齐缺失脚本和开发依赖声明，安装依赖后执行 `npm run tooling:setup`。配置冲突显性报告，不覆盖已有约定；操作步骤见 [CLI 文档](docs/cli.md)。
 
 当前不包含 diff/update、全局 Skills 安装、二进制资产分发、私有源认证或远程 GitHub 操作。这些边界与未来 Web Registry/MCP、移动端方向均记录在架构文档。
+
+本仓库采用 [MIT License](LICENSE)。通过 CLI 安装的 Skills、UI、预设和模板会携带相应版权与许可声明；请在复制和分发时保留。

@@ -1,6 +1,6 @@
 # CLI 命令与目录协议
 
-公共包名为 @luigi/tools，bin 命令为 lt。npm 发布后可直接 npx @luigi/tools 使用；本地开发可用 node packages/cli/dist/index.js 替代 lt。
+公共包名为 @luigix/tools，bin 命令为 lt。npm 发布后可直接 npx @luigix/tools 使用；本地开发可用 node packages/cli/dist/index.js 替代 lt。
 
 ## 命令
 
@@ -102,6 +102,8 @@ MVP 的内部 JSON 目录是轻量文本分发格式，不声称兼容 shadcn sc
 
 ## 发布
 
-维护者先运行 pnpm check 与 pnpm smoke。发布前核对 CLI/目录版本、包内文件、npm 身份和 @luigi scope 权限。公共分发配置已准备，命名空间存在不代表当前账号有发布权。只有获得发布授权后才执行 npm publish。
+包名保持 `@luigix/tools`，命令为 `lt`，许可证为 MIT。构建从根 LICENSE 生成包内许可证，并为每个安装资产携带独立声明，避免组合安装路径冲突。Skill 的声明位于其自身 LICENSE，其他资产位于 `licenses/luigi-tools/`；这不替业务项目决定其新增代码的许可。
+
+维护者先运行 pnpm check 与 pnpm smoke。发布前核对 CLI/目录版本、包内文件、npm 身份和 @luigix scope 权限。公共分发配置已准备，命名空间存在不代表当前账号有发布权。只有获得发布授权后才执行 npm publish。
 
 不要把 npm token 写进仓库。未来 CI 发布优先配置 npm trusted publishing；未配置时保留本地人工发布，不生成无凭据的自动发布工作流。

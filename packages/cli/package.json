@@ -1,5 +1,5 @@
 {
-  "name": "@luigi/tools",
+  "name": "@luigix/tools",
   "version": "0.1.0",
   "description": "初始化业务项目，分发 Skills、UI 组件与项目管理预设",
   "publishConfig": {
@@ -15,7 +15,8 @@
   "files": [
     "dist",
     "registry",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=22.13.0"
@@ -41,5 +42,6 @@
     "agent",
     "skills",
     "scaffolding"
-  ]
+  ],
+  "license": "MIT"
 }

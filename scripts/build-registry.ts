@@ -10,6 +10,7 @@ import {
 } from "../packages/cli/src/schema.js";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
+const license = await readFile(join(root, "LICENSE"), "utf8");
 const catalog = parseJson(
   await readFile(join(root, "skills/catalog.json"), "utf8"),
   "目录描述",
@@ -57,6 +58,7 @@ for (const name of catalog.skills) {
   };
   if (metadata.name !== name || typeof metadata.description !== "string")
     throw new Error(`${name} 的元数据不匹配`);
+  files.push({ path: "LICENSE", content: license, sha256: sha256(license) });
   skills.push({ name, description: metadata.description, files });
 }
 const assetCatalog = parseJson(
@@ -86,6 +88,13 @@ for (const { directory, ...metadata } of assetCatalog.assets) {
       sha256: sha256(content),
     });
   }
+  // Independent assets need their own notices without colliding when composed.
+  const notice = `@luigix/tools: ${metadata.type}/${metadata.name}\n\n${license}`;
+  files.push({
+    path: `licenses/luigi-tools/${metadata.type}-${metadata.name}.txt`,
+    content: notice,
+    sha256: sha256(notice),
+  });
   assets.push({ ...metadata, files });
 }
 const registry = parseData(
@@ -100,6 +109,7 @@ const registry = parseData(
 );
 const output = join(root, "packages/cli/registry");
 await mkdir(output, { recursive: true });
+await writeFile(join(root, "packages/cli/LICENSE"), license);
 await writeFile(
   join(output, "index.json"),
   `${JSON.stringify(registry, null, 2)}\n`,

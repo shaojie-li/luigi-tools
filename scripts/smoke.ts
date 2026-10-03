@@ -40,7 +40,7 @@ try {
     filename: string;
     name: string;
   }[];
-  assert.equal(packages[0]?.name, "@luigi/tools");
+  assert.equal(packages[0]?.name, "@luigix/tools");
   const tarball = join(staging, packages[0]!.filename);
   const consumer = join(staging, "consumer");
   await mkdir(consumer);
@@ -50,7 +50,14 @@ try {
   );
   console.log("2/4 在仓库外通过 npm 安装并运行 CLI");
   await run(npm, ["install", "--no-audit", "--no-fund", tarball], consumer);
-  const cli = join(consumer, "node_modules/@luigi/tools/dist/index.js");
+  const cli = join(consumer, "node_modules/@luigix/tools/dist/index.js");
+  assert.equal(
+    await readFile(
+      join(consumer, "node_modules/@luigix/tools/LICENSE"),
+      "utf8",
+    ),
+    await readFile(join(root, "LICENSE"), "utf8"),
+  );
   const bin = join(consumer, "node_modules/.bin/lt");
   if (process.platform !== "win32") {
     const version = await run(bin, ["--version"], consumer);
@@ -77,6 +84,14 @@ try {
     ).stdout,
   ) as { ok: boolean };
   assert.equal(report.ok, true);
+  assert.match(
+    await readFile(join(app, "licenses/luigi-tools/ui-button.txt"), "utf8"),
+    /Copyright \(c\) 2026 Luigi Li/,
+  );
+  assert.equal(
+    await readFile(join(app, ".agents/skills/web-ui/LICENSE"), "utf8"),
+    await readFile(join(root, "LICENSE"), "utf8"),
+  );
   assert.match(
     await readFile(join(app, "src/components/ui/Button.tsx"), "utf8"),
     /@base-ui/,

@@ -1,6 +1,7 @@
 node_modules/
 dist/
 packages/cli/registry/
+packages/cli/LICENSE
 *.tgz
 .DS_Store
 .agent-base/install.lock
