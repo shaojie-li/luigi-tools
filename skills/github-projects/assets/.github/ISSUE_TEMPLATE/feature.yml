@@ -1,0 +1,30 @@
+name: 功能需求
+description: 用用户价值和验收标准描述一项工作
+title: "[Feature] "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题与用户价值
+      description: 谁在什么场景遇到了什么问题？
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 范围与非目标
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      description: 列出可观察结果及关键失败路径。
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: 验证方式与依赖
+    validations:
+      required: true

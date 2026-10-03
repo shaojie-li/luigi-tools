@@ -1,0 +1,7 @@
+node_modules
+**/dist
+packages/cli/registry
+pnpm-lock.yaml
+**/.husky/_
+**/.agent-base
+**/package-lock.json

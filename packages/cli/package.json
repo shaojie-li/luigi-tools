@@ -1,0 +1,45 @@
+{
+  "name": "@luigi/tools",
+  "version": "0.1.0",
+  "description": "初始化业务项目，分发 Skills、UI 组件与项目管理预设",
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "prepack": "node dist/verify-package.js"
+  },
+  "type": "module",
+  "bin": {
+    "lt": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "registry",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "dependencies": {
+    "@clack/prompts": "1.8.1",
+    "commander": "15.0.0",
+    "zod": "4.6.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shaojie-li/luigi-tools.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/shaojie-li/luigi-tools#readme",
+  "bugs": {
+    "url": "https://github.com/shaojie-li/luigi-tools/issues"
+  },
+  "keywords": [
+    "cli",
+    "react",
+    "typescript",
+    "agent",
+    "skills",
+    "scaffolding"
+  ]
+}

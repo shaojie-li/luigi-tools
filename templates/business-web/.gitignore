@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+.env.*.local
+.agent-base/install.lock
+.husky/_/
+coverage/

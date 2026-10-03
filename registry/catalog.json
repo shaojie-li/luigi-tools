@@ -1,0 +1,61 @@
+{
+  "assets": [
+    {
+      "type": "ui",
+      "name": "button",
+      "description": "基于 Base UI 的按钮和统一交互样式",
+      "directory": "registry/ui/button",
+      "dependencies": {
+        "@base-ui/react": "^1.8.0",
+        "react": "^19.0.0",
+        "tailwindcss": "^4.0.0"
+      }
+    },
+    {
+      "type": "ui",
+      "name": "form-field",
+      "description": "带可访问标签、提示和错误的表单字段布局",
+      "directory": "registry/ui/form-field",
+      "dependencies": {
+        "react": "^19.0.0",
+        "tailwindcss": "^4.0.0"
+      }
+    },
+    {
+      "type": "ui",
+      "name": "data-table",
+      "description": "TanStack Table 的可组合排序与分页表格",
+      "directory": "registry/ui/data-table",
+      "dependencies": {
+        "react": "^19.0.0",
+        "@tanstack/react-table": "^8.21.3",
+        "tailwindcss": "^4.0.0"
+      }
+    },
+    {
+      "type": "preset",
+      "name": "github-projects",
+      "description": "Issue 表单、PR 模板与项目管理标准",
+      "directory": "skills/github-projects/assets"
+    },
+    {
+      "type": "preset",
+      "name": "code-quality",
+      "description": "TypeScript、React 命名、ESLint、Prettier 和 Git 提交规范",
+      "directory": "registry/presets/code-quality"
+    },
+    {
+      "type": "template",
+      "name": "business-web",
+      "description": "React 业务管理台：任务列表、表单和本地持久化",
+      "directory": "templates/business-web",
+      "requires": [
+        "ui/button",
+        "ui/form-field",
+        "ui/data-table",
+        "preset/github-projects",
+        "preset/code-quality"
+      ]
+    }
+  ]
+}

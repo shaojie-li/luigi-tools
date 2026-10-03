@@ -1,0 +1,49 @@
+{
+  "name": "agent-base",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@10.34.6",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "pnpm registry:build && tsx packages/cli/src/index.ts",
+    "registry:build": "tsx scripts/build-registry.ts",
+    "build": "pnpm registry:build && tsc -p packages/cli/tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "pnpm registry:build && tsx --test packages/cli/test/*.test.ts scripts/*.test.ts",
+    "smoke": "pnpm build && tsx scripts/smoke.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm build",
+    "lint": "eslint --config eslint.config.ts . --max-warnings=0",
+    "lint:fix": "eslint --config eslint.config.ts . --fix --max-warnings=0",
+    "precommit": "lint-staged && npm run lint && npm run format:check && npm run typecheck",
+    "prepare": "tsx registry/presets/code-quality/tooling/setup-hooks.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "prettier": "^3.6.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "yaml": "^2.8.0",
+    "eslint": "10.12.0",
+    "@eslint/js": "10.0.1",
+    "typescript-eslint": "8.71.0",
+    "eslint-config-prettier": "10.1.8",
+    "eslint-plugin-check-file": "3.3.2",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "^16.5.0",
+    "jiti": "2.7.0",
+    "husky": "9.1.7",
+    "lint-staged": "16.2.7",
+    "@commitlint/cli": "21.2.3",
+    "@commitlint/config-conventional": "21.2.3",
+    "@commitlint/types": "21.2.3",
+    "eslint-plugin-react-x": "5.23.5"
+  },
+  "lint-staged": {
+    "*": "prettier --write --ignore-unknown"
+  }
+}

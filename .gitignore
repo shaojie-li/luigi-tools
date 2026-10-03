@@ -1,0 +1,8 @@
+node_modules/
+dist/
+packages/cli/registry/
+*.tgz
+.DS_Store
+.agent-base/install.lock
+.agent-base/manifest.tmp
+**/.husky/_/
