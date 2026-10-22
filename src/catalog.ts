@@ -254,7 +254,6 @@ export async function materialize(
     },
     source: catalog.source,
     sha256: catalog.sha256,
-    origins: {},
   };
   let total = 0;
   // Bound concurrent memory use; every payload is verified before the transaction begins.
@@ -288,11 +287,6 @@ export async function materialize(
           .filter((ref) => !ref.key.startsWith("skill/"))
           .map((ref) => ref.key),
       });
-    result.origins![key] = {
-      version: entry.version,
-      source: payload.source,
-      sha256: payload.sha256,
-    };
   }
   // Reuse all file/path/digest checks, including references in the resolved graph.
   result.data = parseData(registrySchema, result.data, "安装计划");

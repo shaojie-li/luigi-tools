@@ -117,9 +117,9 @@ await test("list 只读取轻量索引；选择一个 UI 只下载该资产，�
 
 await test("模板跨来源固定旧版本；新版本独立发布不会改变模板依赖；按实际文件安装精确依赖", async (t) => {
   const f = fixture();
-  const old = f.add("ui", "button", "1.0.0");
+  f.add("ui", "button", "1.0.0");
   f.add("ui", "button", "2.0.0");
-  const skill = f.add("skill", "forms", "3.0.0");
+  f.add("skill", "forms", "3.0.0");
   f.add("skill", "unused");
   f.add("template", "app", "4.0.0", [
     { key: "ui/button", version: "1.0.0" },
@@ -137,8 +137,10 @@ await test("模板跨来源固定旧版本；新版本独立发布不会改变�
   assert.deepEqual(await readdir(root), []);
   await installAssets(root, registry, "template", ["app"], false, "codex");
   assert.deepEqual(await readdir(root), [".agents", "app.txt", "button.txt"]);
-  assert.equal(registry.origins?.["skill/forms"]?.sha256, skill.sha256);
-  assert.equal(registry.origins?.["ui/button"]?.source, old.url);
+  assert.equal(
+    await readFile(join(root, ".agents/skills/forms/SKILL.md"), "utf8"),
+    "---\nname: forms\ndescription: 测试\n---\n3.0.0",
+  );
   assert.equal(
     await readFile(join(root, "button.txt"), "utf8"),
     "button@1.0.0",

@@ -22,7 +22,7 @@ luigi-infra/
 | templates                                  | luigi-starters/templates                    |
 | scripts/preset-setup.test.ts               | luigi-starters/scripts/preset-setup.test.ts |
 
-github-projects Skill 将所需说明保留为 references，并通过 CLI 引用独立预设，不依赖另一个仓库的相对路径。code-quality 预设携带完整编码规范；CLI 本身保留本地工程工具副本。
+github-projects Skill 将所需说明保留为 references，并通过 CLI 引用独立预设，不依赖另一个仓库的相对路径。code-quality 预设携带完整编码规范；CLI 本身只保留适用于 Node.js CLI 的本地工程工具和规范。
 
 ## 内容仓库工作流
 

@@ -15,7 +15,6 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import type { TestContext } from "node:test";
-import { parse } from "yaml";
 import { execute } from "../src/commands.js";
 import { install } from "../src/install.js";
 import { projectRoot } from "../src/project.js";
@@ -499,7 +498,7 @@ await test("完整命令可以从指定本地目录快照安装附带资源", as
   assert.deepEqual(await readdir(root), [".agents"]);
 });
 
-await test("init 创建新项目并安装组件、管理预设与四个 Skills", async (t) => {
+await test("v1 init 创建项目并安装全部依赖和五个 Skills", async (t) => {
   const parent = await temp(t);
   const root = join(parent, "new-project");
   const preview = await run(parent, [
@@ -528,20 +527,10 @@ await test("init 创建新项目并安装组件、管理预设与四个 Skills",
     JSON.parse(await readFile(join(root, "package.json"), "utf8")).name,
     "business-web",
   );
-  // pnpm 8 rejects a workspace configuration without a non-empty packages field.
-  const workspace = parse(
-    await readFile(join(root, "pnpm-workspace.yaml"), "utf8"),
-  ) as { packages: string[]; allowBuilds: Record<string, boolean> };
-  assert.deepEqual(workspace.packages, ["."]);
-  assert.equal(workspace.allowBuilds.esbuild, true);
-  assert.match(
-    await readFile(join(root, "src/components/ui/Button.tsx"), "utf8"),
-    /@base-ui/,
-  );
-  assert.match(
-    await readFile(join(root, ".github/ISSUE_TEMPLATE/feature.yml"), "utf8"),
-    /验收标准/,
-  );
+  const registry = await loadRegistry();
+  for (const asset of registry.data.assets)
+    for (const file of asset.files)
+      assert.equal(await readFile(join(root, file.path), "utf8"), file.content);
   const installed = await readdir(join(root, ".agents/skills"));
   assert.equal(installed.length, 5);
   assert.ok(!(await readdir(root)).includes(".agent-base"));
@@ -600,21 +589,19 @@ await test("UI 可独立安装；缺依赖时明确报错且零写入", async (t
     join(root, "package.json"),
     JSON.stringify({
       dependencies: {
-        react: "^19",
-        "@base-ui/react": "^1.8",
-        tailwindcss: "^4",
+        "fixture-peer": "1.0.0",
       },
     }),
   );
   await installAssets(root, registry, "ui", ["button"], false);
   assert.equal((await doctor(root)).ok, true);
-  await writeFile(join(root, "src/components/ui/Button.tsx"), "customized");
+  await writeFile(join(root, "fixtures/button.ts"), "customized");
   await assert.rejects(
     installAssets(root, registry, "ui", ["button"], false),
     /未覆盖/,
   );
   assert.equal(
-    await readFile(join(root, "src/components/ui/Button.tsx"), "utf8"),
+    await readFile(join(root, "fixtures/button.ts"), "utf8"),
     "customized",
   );
 });
@@ -652,10 +639,12 @@ await test("质量预设可独立安装，保留 package.json 并给出显式设
     JSON.parse(result.stdout).nextSteps[0],
     /tooling\/setup-project.ts/,
   );
-  assert.match(
-    await readFile(join(root, "docs/coding-standards.md"), "utf8"),
-    /PascalCase/,
-  );
+  const registry = await loadRegistry();
+  const preset = registry.data.assets.find(
+    (asset) => asset.name === "code-quality",
+  )!;
+  for (const file of preset.files)
+    assert.equal(await readFile(join(root, file.path), "utf8"), file.content);
   assert.equal((await doctor(root)).ok, true);
   const again = await run(root, [
     "add",

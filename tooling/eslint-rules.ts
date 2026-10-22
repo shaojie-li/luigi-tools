@@ -1,9 +1,6 @@
 import js from "@eslint/js";
 import prettier from "eslint-config-prettier/flat";
 import checkFile from "eslint-plugin-check-file";
-import reactHooks from "eslint-plugin-react-hooks";
-import reactX from "eslint-plugin-react-x";
-import { reactNaming } from "./react-naming.js";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
@@ -31,9 +28,9 @@ export function createEslintConfig({
       ],
     },
     {
-      files: ["**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}"],
+      files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
       extends: [js.configs.recommended, ...tseslint.configs.recommended],
-      languageOptions: { globals: { ...globals.node, ...globals.browser } },
+      languageOptions: { globals: globals.node },
       linterOptions: { reportUnusedDisableDirectives: "error" },
       plugins: { "check-file": checkFile },
       rules: {
@@ -74,28 +71,6 @@ export function createEslintConfig({
         ],
         "@typescript-eslint/no-misused-promises": "error",
         "@typescript-eslint/await-thenable": "error",
-      },
-    },
-    {
-      // Custom Hooks commonly live in .ts files without JSX.
-      files: ["**/*.{js,jsx,ts,tsx}"],
-      extends: [reactHooks.configs.flat.recommended],
-      rules: {
-        "react-hooks/exhaustive-deps": "error",
-        "react-hooks/incompatible-library": "error",
-      },
-    },
-    {
-      files: ["**/*.{jsx,tsx}"],
-      plugins: {
-        "react-x": reactX,
-        local: { rules: { "react-naming": reactNaming } },
-      },
-      rules: {
-        "local/react-naming": "error",
-        "react-x/no-array-index-key": "error",
-        "react-x/no-missing-key": "error",
-        "react-x/no-nested-component-definitions": "error",
       },
     },
     // Keep this last. Formatting is owned by Prettier, not ESLint rules.

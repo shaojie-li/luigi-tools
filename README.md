@@ -53,7 +53,7 @@ LT_SOURCE="$PWD/sources.local.json" pnpm dev -- list
 LT_SOURCE="$PWD/sources.local.json" pnpm smoke
 ```
 
-单独检出 CLI 就能执行检查，测试不依赖同级内容仓库。`test/fixtures/registry-v1.json` 是冻结的旧协议回归输入，不是资产源码，也不会进入 npm 包。默认 smoke 使用该历史快照；指定 `LT_SOURCE` 后验证真实内容仓库的组合安装、npm/pnpm 依赖安装和模板完整检查。
+单独检出 CLI 就能执行检查，测试不依赖同级内容仓库。`test/fixtures/registry-v1.json` 是最小旧协议回归夹具，不包含产品资产源码，也不会进入 npm 包。默认 smoke 将夹具转换为 v2 索引和独立快照，验证按需安装、文件一致性、重复安装保护与 npm/pnpm 真实依赖安装；指定 `LT_SOURCE` 后联调真实内容来源，并运行所选模板的 check 脚本。
 
 文档：[架构](docs/architecture.md) · [CLI 与来源协议](docs/cli.md) · [拆仓说明](docs/repository-split.md) · [发布说明](docs/releasing.md) · [编码规范](docs/coding-standards.md) · [验证记录](docs/validation.md)。
 

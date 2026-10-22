@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-// Frozen v1 input preserves legacy installation regression coverage, never shipped in npm.
+// Minimal v1 fixture covers legacy installation, never shipped in npm.
 process.env.LT_SOURCE = fileURLToPath(
   new URL("./registry-v1.json", import.meta.url),
 );

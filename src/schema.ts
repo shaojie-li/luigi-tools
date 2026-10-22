@@ -159,7 +159,6 @@ export const registrySchema = z
   });
 
 export type Registry = z.infer<typeof registrySchema>;
-export type Skill = Registry["skills"][number];
 export type Asset = Registry["assets"][number];
 export type AssetType = z.infer<typeof assetTypeSchema>;
 

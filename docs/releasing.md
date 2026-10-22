@@ -82,6 +82,6 @@ gh release view v1.0.0 --repo shaojie-li/luigi-tools
 npm exec --yes --package=@luigix/tools@1.0.0 -- lt --version
 ```
 
-公开查询可能短暂返回旧数据；此时等待并重新查询，不重复上传或删除标签。`1.0.0` 已完成上述验证，记录见 [验证记录](validation.md#2026-10-22单包结构与自动发布验证)。
+公开查询可能短暂返回旧数据；此时等待并重新查询，不重复上传或删除标签。`1.0.0` 已完成上述验证，记录见 [验证记录](history/validation.md#2026-10-22单包结构与自动发布验证)。
 
 参考：[@semantic-release/git](https://github.com/semantic-release/git)、[semantic-release GitHub Actions](https://semantic-release.org/recipes/ci-configurations/github-actions/)、[npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers/)。

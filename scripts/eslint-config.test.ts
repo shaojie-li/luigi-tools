@@ -5,7 +5,7 @@ import { Linter } from "eslint";
 import { createEslintConfig } from "../tooling/eslint-rules.js";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-// These in-memory fixtures exercise naming and React rules without a TS project.
+// These in-memory fixtures exercise CLI naming and correctness rules without a TS project.
 // Keep the type-aware block intact but outside the fixture paths.
 const config = createEslintConfig({
   root,
@@ -22,16 +22,8 @@ function lint(filename: string, source: string) {
 const valid = [
   ["src/lib/task-state.ts", 'export const taskState = "ready";'],
   [
-    "src/features/taskDialog/task-state.ts",
+    "src/features/install-plan/task-state.ts",
     'export const taskState = "ready";',
-  ],
-  [
-    "src/components/TaskList.tsx",
-    "export function TaskList({ tasks }: { tasks: { id: string; title: string }[] }) { return <ul>{tasks.map((task) => <li key={task.id}>{task.title}</li>)}</ul>; }",
-  ],
-  [
-    "src/components/taskDialog/index.tsx",
-    'import { useState } from "react"; export function TaskDialog() { const [open, setOpen] = useState(false); return <button onClick={() => setOpen(!open)}>{String(open)}</button>; }',
   ],
 ] as const;
 
@@ -43,11 +35,6 @@ for (const [filename, source] of valid) {
 
 const invalid = [
   [
-    "src/hooks/use-task.ts",
-    'import { useState } from "react"; export function useTask(ready: boolean) { if (ready) { return useState("task"); } return null; }',
-    "react-hooks/rules-of-hooks",
-  ],
-  [
     "src/lib/taskState.ts",
     'export const taskState = "ready";',
     "check-file/filename-naming-convention",
@@ -57,30 +44,11 @@ const invalid = [
     'export const taskState = "ready";',
     "check-file/folder-naming-convention",
   ],
+  ["src/lib/task-state.ts", "debugger;", "no-debugger"],
   [
-    "src/components/TaskList.tsx",
-    "export function TaskList({ tasks }: { tasks: string[] }) { return <ul>{tasks.map((task) => <li>{task}</li>)}</ul>; }",
-    "react-x/no-missing-key",
-  ],
-  [
-    "src/components/TaskList.tsx",
-    "export function TaskList({ tasks }: { tasks: string[] }) { return <ul>{tasks.map((task, index) => <li key={index}>{task}</li>)}</ul>; }",
-    "react-x/no-array-index-key",
-  ],
-  [
-    "src/components/TaskList.tsx",
-    "export function TaskList() { function TaskRow() { return <li>task</li>; } return <ul><TaskRow /></ul>; }",
-    "react-x/no-nested-component-definitions",
-  ],
-  [
-    "src/components/TaskList.tsx",
-    'import { useState } from "react"; export function TaskList({ ready }: { ready: boolean }) { if (ready) { const [task] = useState("task"); return <div>{task}</div>; } return null; }',
-    "react-hooks/rules-of-hooks",
-  ],
-  [
-    "src/components/task-list.tsx",
-    "export function TaskList() { return <ul />; }",
-    "local/react-naming",
+    "src/lib/task-state.ts",
+    "export const equal = (value: unknown) => value == null;",
+    "eqeqeq",
   ],
 ] as const;
 

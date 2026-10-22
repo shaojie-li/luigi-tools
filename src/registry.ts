@@ -8,7 +8,6 @@ import type { Registry } from "./schema.js";
 const maxBytes = 2 * 1024 * 1024;
 export interface LoadedRegistry {
   data: Registry;
-  origins?: Record<string, { version: string; source: string; sha256: string }>;
   source: string;
   sha256: string;
 }
@@ -66,16 +65,6 @@ export async function loadRegistry(
 ): Promise<LoadedRegistry> {
   const loaded = await readSource(source, expectedSha256, fetcher);
   return { ...loaded, data: parseData(registrySchema, loaded.data, "目录") };
-}
-
-export function assetOrigin(registry: LoadedRegistry, key: string) {
-  return (
-    registry.origins?.[key] ?? {
-      version: registry.data.version,
-      source: registry.source,
-      sha256: registry.sha256,
-    }
-  );
 }
 
 const maxAttempts = 5;

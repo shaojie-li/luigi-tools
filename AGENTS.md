@@ -2,7 +2,7 @@
 
 - 默认中文沟通、文档和提交说明。编码或评审前阅读 [编码规范](docs/coding-standards.md) 中适用于 CLI 的 TypeScript、命名、错误处理、质量检查和提交规则；架构边界以 [架构文档](docs/architecture.md) 为准。
 - 本仓库只维护 `@luigix/tools`，命令为 `lt`。这是单包 TypeScript strict / ESM 项目，源码在根目录 `src/`，测试在 `test/`，工程脚本在 `scripts/`；不恢复 `packages/cli` 或引入 workspace 子包。
-- UI、Skills、模板和可分发预设分别归 `luigi-ui`、`luigi-skills`、`luigi-starters` 维护。可分发资产源码不搬回 CLI；`.agents/skills` 可保存供本项目开发使用的已安装 Skill 快照，源文件仍在 luigi-skills 维护，不作为 CLI 分发资产。不通过同级目录导入其他仓库的私有源码；`test/fixtures/registry-v1.json` 只用于旧协议回归。
+- UI、Skills、模板和可分发预设分别归 `luigi-ui`、`luigi-skills`、`luigi-starters` 维护。可分发资产源码不搬回 CLI；`.agents/skills` 可保存供本项目开发使用的已安装 Skill 快照，源文件仍在 luigi-skills 维护，不作为 CLI 分发资产。不通过同级目录导入其他仓库的私有源码；`test/fixtures/registry-v1.json` 是最小协议夹具，用于旧协议回归及生成默认 smoke 的 v2 来源，不维护产品资产。
 - CLI 交互层只收集输入，交互与完整命令调用同一套安装、检查逻辑。非交互写入必须显式提供 `--cwd`；参数不完整时显性失败，不弹菜单或猜测目标目录。
 - 来源协议和参数行为以 [CLI 文档](docs/cli.md) 为准。按需下载选中资产及其精确版本依赖，校验身份、摘要和路径后再写入；失败不能返回伪造成功结果。
 - 保持已有文件保护、整批冲突检查、项目锁和失败回滚，不增加隐式覆盖或强制升级。不创建或读取持久安装记录；Skill 按实际 SKILL.md 的 name 识别，同名已存在就跳过。UI/预设按实际文件内容比较；仅使用安装期间的临时锁。保留 v1 来源兼容能力。

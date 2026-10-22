@@ -50,7 +50,6 @@
   },
   "keywords": [
     "cli",
-    "react",
     "typescript",
     "agent",
     "skills",
@@ -68,7 +67,6 @@
     "typescript-eslint": "8.71.0",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-check-file": "3.3.2",
-    "eslint-plugin-react-hooks": "7.1.1",
     "globals": "^16.5.0",
     "jiti": "2.7.0",
     "husky": "9.1.7",
@@ -76,7 +74,6 @@
     "@commitlint/cli": "21.2.3",
     "@commitlint/config-conventional": "21.2.3",
     "@commitlint/types": "21.2.3",
-    "eslint-plugin-react-x": "5.23.5",
     "conventional-changelog-conventionalcommits": "9.3.1",
     "semantic-release": "25.0.9",
     "@semantic-release/git": "11.0.1"
