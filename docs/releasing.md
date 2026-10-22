@@ -17,7 +17,7 @@ PR 和 fork 不运行 release job。普通检查仅有 `contents: read`；发布
 
 ## 自动版本规则
 
-`.releaserc.json` 为提交分析和发布说明统一使用 `conventionalcommits` preset：
+`.releaserc.json` 为提交分析和发布说明统一使用 `conventionalcommits` preset。当前固定使用与发布说明插件兼容的 9.3.1；升级时必须验证发布说明渲染，不能只验证版本计算。版本规则：
 
 | 提交                                            | 版本变化       |
 | ----------------------------------------------- | -------------- |
@@ -51,7 +51,7 @@ npm 上已有该包，不需要重新进行首包发布。在 npm 登录拥有 `
 
 ## 验证与失败处理
 
-提交前运行 `pnpm check`、`pnpm smoke`。版本回归测试在临时 Git 仓库中使用真实 semantic-release dry-run，覆盖 patch、minor、两种 major 写法、无发布变更；不会访问 npm 或 GitHub，也不会创建发布 tag。smoke 校验已安装命令的版本与打包元数据一致，不再硬编码版本号。
+提交前运行 `pnpm check`、`pnpm smoke`。版本回归测试在临时 Git 仓库中使用真实 semantic-release dry-run，覆盖 patch、minor、两种 major 写法、无发布变更，以及发布说明生成和不兼容变更提示；不会访问 npm 或 GitHub，也不会创建发布 tag。smoke 校验已安装命令的版本与打包元数据一致，不再硬编码版本号。
 
 检查失败时先修复检查；认证失败时核对 npm 绑定的 owner、仓库、workflow 文件名。修复外部配置后可在 GitHub Actions 重跑失败任务，不需要为重试手动增加版本号。
 

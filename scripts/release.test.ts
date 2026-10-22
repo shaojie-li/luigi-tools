@@ -18,6 +18,12 @@ const analyzer = config.plugins?.find(
     Array.isArray(plugin) && plugin[0] === "@semantic-release/commit-analyzer",
 );
 assert.ok(analyzer, "发布配置必须声明提交分析插件");
+const notesGenerator = config.plugins?.find(
+  (plugin) =>
+    Array.isArray(plugin) &&
+    plugin[0] === "@semantic-release/release-notes-generator",
+);
+assert.ok(notesGenerator, "发布配置必须声明发布说明生成插件");
 
 for (const scenario of [
   { messages: ["fix: 修复安装路径"], version: "0.1.1" },
@@ -59,12 +65,12 @@ for (const scenario of [
         join(cwd, "node_modules"),
         "junction",
       );
-      // 只运行真实版本分析；隔离发布插件、凭据和远程服务。
+      // 运行真实版本分析与发布说明生成；隔离发布插件、凭据和远程服务。
       const result = await semanticRelease(
         {
           ...config,
           repositoryUrl: pathToFileURL(remote).href,
-          plugins: [analyzer],
+          plugins: [analyzer, notesGenerator],
           dryRun: true,
           ci: false,
         },
@@ -74,6 +80,14 @@ for (const scenario of [
         result ? result.nextRelease.version : undefined,
         scenario.version,
       );
+      if (result) {
+        const notes = result.nextRelease.notes;
+        assert.ok(notes, "需要发布时必须生成发布说明");
+        assert.ok(notes.includes(result.nextRelease.version));
+        if (scenario.version === "1.0.0") {
+          assert.match(notes, /BREAKING CHANGES/);
+        }
+      }
       assert.equal((await git(["tag", "--list"])).stdout.trim(), "v0.1.0");
     } finally {
       await rm(staging, { recursive: true, force: true });
