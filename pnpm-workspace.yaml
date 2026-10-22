@@ -1,5 +1,3 @@
-packages:
-  - packages/*
-
+# 单包项目的依赖构建权限配置，不声明 workspace 子包。
 onlyBuiltDependencies:
   - esbuild

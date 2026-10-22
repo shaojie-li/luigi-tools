@@ -5,5 +5,5 @@ pnpm-lock.yaml
 **/.agent-base
 **/package-lock.json
 
-packages/cli/test/fixtures/registry-v1.json
+test/fixtures/registry-v1.json
 sources.local.json

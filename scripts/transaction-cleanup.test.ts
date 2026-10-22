@@ -10,8 +10,8 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { transact } from "../packages/cli/src/transaction.js";
-import type { ChangePlan } from "../packages/cli/src/transaction.js";
+import { transact } from "../src/transaction.js";
+import type { ChangePlan } from "../src/transaction.js";
 
 const plan: ChangePlan = {
   manifest: { schemaVersion: 1, installations: [], assets: [] },

@@ -16,8 +16,7 @@ import { promisify } from "node:util";
 const exec = promisify(execFile);
 const root = fileURLToPath(new URL("../", import.meta.url));
 const source =
-  process.env.LT_SOURCE ??
-  join(root, "packages/cli/test/fixtures/registry-v1.json");
+  process.env.LT_SOURCE ?? join(root, "test/fixtures/registry-v1.json");
 const staging = await mkdtemp(join(tmpdir(), "agent-base-package-"));
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 
@@ -43,12 +42,13 @@ try {
   const packed = await run(
     npm,
     ["pack", "--json", "--pack-destination", staging],
-    join(root, "packages/cli"),
+    root,
   );
   const start = packed.stdout.indexOf("[\n");
   const packages = JSON.parse(packed.stdout.slice(start)) as {
     filename: string;
     name: string;
+    version: string;
   }[];
   assert.equal(packages[0]?.name, "@luigix/tools");
   const tarball = join(staging, packages[0]!.filename);
@@ -61,11 +61,19 @@ try {
   console.log("2/5 在仓库外通过 npm 安装并运行 CLI");
   await run(npm, ["install", "--no-audit", "--no-fund", tarball], consumer);
   const cli = join(consumer, "node_modules/@luigix/tools/dist/index.js");
-  assert.ok(
-    !(await readdir(join(consumer, "node_modules/@luigix/tools"))).includes(
-      "registry",
-    ),
+  const installedFiles = await readdir(
+    join(consumer, "node_modules/@luigix/tools"),
   );
+  for (const excluded of [
+    "registry",
+    "packages",
+    "src",
+    "test",
+    "scripts",
+    "tooling",
+  ]) {
+    assert.ok(!installedFiles.includes(excluded), `分发包不应包含 ${excluded}`);
+  }
   assert.equal(
     await readFile(
       join(consumer, "node_modules/@luigix/tools/LICENSE"),
@@ -76,7 +84,7 @@ try {
   const bin = join(consumer, "node_modules/.bin/lt");
   if (process.platform !== "win32") {
     const version = await run(bin, ["--version"], consumer);
-    assert.equal(version.stdout.trim(), "0.1.0");
+    assert.equal(version.stdout.trim(), packages[0]!.version);
   }
   const listed = JSON.parse(
     (

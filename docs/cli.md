@@ -1,6 +1,6 @@
 # CLI 命令与目录协议
 
-公共包名为 @luigix/tools，bin 命令为 lt。npm 发布后可直接 npx @luigix/tools 使用；本地开发可用 node packages/cli/dist/index.js 替代 lt。
+公共包名为 @luigix/tools，bin 命令为 lt。npm 发布后可直接 npx @luigix/tools 使用；本地开发可用 node dist/index.js 替代 lt。
 
 ## 命令
 
@@ -140,8 +140,8 @@ npm run tooling:setup
 
 ## 发布
 
-包名保持 `@luigix/tools`，命令为 `lt`，许可证为 MIT。构建从根 LICENSE 生成 npm 包内许可证，不再向每个 Skill、UI、预设和模板附加独立许可副本，因此安装不生成 `licenses/luigi-tools/` 或 Skill 下的 LICENSE。此规则只移除构建脚本自动附加的副本；资产来源自带的文件仍按原样分发。
+包名保持 `@luigix/tools`，命令为 `lt`，许可证为 MIT。npm 包直接包含根目录 LICENSE，不再向每个 Skill、UI、预设和模板附加独立许可副本，因此安装不生成 `licenses/luigi-tools/` 或 Skill 下的 LICENSE。此规则只移除构建脚本自动附加的副本；资产来源自带的文件仍按原样分发。
 
-维护者先运行 pnpm check 与 pnpm smoke。发布前核对 CLI 版本、默认公开索引可用性、包内文件、npm 身份和 @luigix scope 权限。公共分发配置已准备，命名空间存在不代表当前账号有发布权。只有获得发布授权后才执行 npm publish。
+CLI 使用 semantic-release，根据 Conventional Commits 自动计算版本。原仓库 main 的 push 在 `pnpm check`、`pnpm smoke` 通过后触发发布判断；有可发布变更时发布 npm 包并创建 GitHub Release。PR、其他分支和 fork 不执行发布任务。
 
-不要把 npm token 写进仓库。未来 CI 发布优先配置 npm trusted publishing；未配置时保留本地人工发布，不生成无凭据的自动发布工作流。
+发布通过 npm Trusted Publishing（OIDC）认证，不保存长期 npm token。首次使用必须由包维护者完成 npm 侧绑定；配置、版本规则和失败处理见 [发布说明](releasing.md)。

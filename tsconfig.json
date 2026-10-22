@@ -12,6 +12,12 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["packages/**/*.ts", "scripts/**/*.ts", "*.ts", "tooling/**/*.ts"],
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts",
+    "scripts/**/*.ts",
+    "*.ts",
+    "tooling/**/*.ts"
+  ],
   "exclude": ["**/dist", "node_modules"]
 }

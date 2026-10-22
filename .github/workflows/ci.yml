@@ -25,3 +25,27 @@ jobs:
           COMMIT_HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
       - run: pnpm check
       - run: pnpm smoke
+  release:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'shaojie-li/luigi-tools'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: npm-release-main
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Publish to npm and create GitHub Release
+        run: pnpm release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

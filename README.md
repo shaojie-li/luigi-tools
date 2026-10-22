@@ -20,7 +20,7 @@ npx @luigix/tools init business-web --agent codex --cwd ./my-app --package-manag
 npx @luigix/tools doctor --cwd .
 ```
 
-三个内容仓库及公开索引已推送。以上命令描述本次改造后的 CLI 行为，仍需发布新版 npm 包后供公共用户使用；Git 推送不会自动改变已发布 npm 版本。
+三个内容仓库及公开索引已推送。CLI 配置了 main 分支自动发布：npm Trusted Publisher 完成绑定后，push main 通过检查且包含需发布的提交时，自动发布新版 npm 包。公共用户获得的行为以已发布 npm 版本为准。首次启用步骤见 [发布说明](docs/releasing.md)。
 
 CLI 先读取轻量索引，再下载选中资产及其依赖。每个资产独立版本，模板固定依赖版本；修改 Skill 不需要重新发布 CLI。第一次安装需要网络，也可使用本地来源。`doctor` 只检查本地安装记录，离线可用。
 
@@ -29,6 +29,8 @@ CLI 先读取轻量索引，再下载选中资产及其依赖。每个资产独�
 交互终端可补齐目录、Agent、资产与依赖安装选项；非交互写入必须指定 `--cwd`，不会猜测目录或等待输入。`init` 可以选择 npm、pnpm 或暂不安装依赖；失败保留生成项目并报告重试方法。独立 `add` 不执行包管理器。
 
 ## 本地开发
+
+仓库开发工具要求 Node.js `^22.14.0 || >=24.10.0`，推荐 Node.js 24 LTS；已发布 CLI 的运行要求仍为 Node.js 22.13+。
 
 ```bash
 pnpm install --frozen-lockfile
@@ -44,7 +46,7 @@ LT_SOURCE="$PWD/sources.local.json" pnpm dev -- list
 LT_SOURCE="$PWD/sources.local.json" pnpm smoke
 ```
 
-单独检出 CLI 就能执行检查，测试不依赖同级内容仓库。`packages/cli/test/fixtures/registry-v1.json` 是冻结的旧协议回归输入，不是资产源码，也不会进入 npm 包。默认 smoke 使用该历史快照；指定 `LT_SOURCE` 后验证真实内容仓库的组合安装、npm/pnpm 依赖安装和模板完整检查。
+单独检出 CLI 就能执行检查，测试不依赖同级内容仓库。`test/fixtures/registry-v1.json` 是冻结的旧协议回归输入，不是资产源码，也不会进入 npm 包。默认 smoke 使用该历史快照；指定 `LT_SOURCE` 后验证真实内容仓库的组合安装、npm/pnpm 依赖安装和模板完整检查。
 
 文档：[架构](docs/architecture.md) · [CLI 与来源协议](docs/cli.md) · [拆仓说明](docs/repository-split.md) · [编码规范](docs/coding-standards.md)。
 

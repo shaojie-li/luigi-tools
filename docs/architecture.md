@@ -15,15 +15,17 @@
 
 CLI 不导入其他仓库源码，不要求用户安装 Git 或克隆整个仓库。各内容仓库保留自己的锁文件、检查命令和 CI。维护者在内容仓库构建分发文件并随源码提交；不设置自动提交或自动发布。
 
-当前仓库结构：
+当前仓库为单包项目，只有根目录一份 package.json。pnpm-workspace.yaml 仅配置 esbuild 的依赖构建权限，没有 packages 子包声明。仓库结构：
 
 ```text
-packages/cli/src/       CLI 业务逻辑
-packages/cli/test/      安装与来源协议回归测试
-packages/cli/sources.json 默认公开索引地址
-scripts/               CLI 构建、质量检查与 smoke
-tooling/               本仓库使用的工程工具副本
-docs/                  CLI 架构、协议与规范
+src/               CLI 业务逻辑
+test/              安装与来源协议回归测试
+scripts/           质量检查与 smoke
+tooling/           本仓库使用的工程工具副本
+docs/              CLI 架构、协议与规范
+sources.json       默认公开索引地址
+package.json       开发脚本、依赖与 npm 发布配置
+tsconfig.build.json CLI 构建配置
 ```
 
 本仓库的 tooling 和编码规范是消费者配置；可分发的 code-quality 预设归 luigi-starters 维护，两者不通过相对路径互相导入。测试中的 v1 快照冻结旧行为，不承担产品内容维护或分发职责。
