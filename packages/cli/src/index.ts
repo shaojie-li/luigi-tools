@@ -42,9 +42,13 @@ program
   .name("lt")
   .description("初始化业务项目，安装 Skills、UI 与项目预设")
   .version(metadata.version)
-  .option("--cwd <directory>", "项目目录，默认当前目录")
+  .option("--cwd <directory>", "目标目录；写入时省略则交互选择，非交互必须指定")
   .option("--agent <agent>", "安装目标：codex 或 claude")
-  .option("--source <path-or-url>", "本地或 HTTPS 目录 JSON，默认内置快照")
+  .option(
+    "--package-manager <manager>",
+    "init 依赖安装：npm、pnpm 或 none（跳过）",
+  )
+  .option("--source <path-or-url>", "本地或 HTTPS 来源 JSON，默认公开分仓索引")
   .option("--source-sha256 <digest>", "固定目录原始内容的 SHA-256")
   .option("--dry-run", "检查安装计划，不写入文件")
   .option("--non-interactive", "禁用交互，参数不足时失败")

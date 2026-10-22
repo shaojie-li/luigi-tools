@@ -14,7 +14,7 @@
   },
   "files": [
     "dist",
-    "registry",
+    "sources.json",
     "README.md",
     "LICENSE"
   ],

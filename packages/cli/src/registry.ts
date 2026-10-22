@@ -1,6 +1,5 @@
 import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { AppError } from "./errors.js";
 import { parseData, parseJson, registrySchema, sha256 } from "./schema.js";
 import type { Registry } from "./schema.js";
@@ -8,15 +7,16 @@ import type { Registry } from "./schema.js";
 const maxBytes = 2 * 1024 * 1024;
 export interface LoadedRegistry {
   data: Registry;
+  origins?: Record<string, { version: string; source: string; sha256: string }>;
   source: string;
   sha256: string;
 }
 
-export async function loadRegistry(
+export async function readSource(
   source?: string,
   expectedSha256?: string,
   fetcher: typeof fetch = fetch,
-): Promise<LoadedRegistry> {
+): Promise<{ data: unknown; source: string; sha256: string }> {
   if (expectedSha256 && !/^[a-f0-9]{64}$/.test(expectedSha256)) {
     throw new AppError(
       "INVALID_DIGEST",
@@ -24,8 +24,8 @@ export async function loadRegistry(
       2,
     );
   }
-  const location =
-    source ?? fileURLToPath(new URL("../registry/index.json", import.meta.url));
+  const location = source ?? process.env.LT_SOURCE;
+  if (!location) throw new AppError("MISSING_SOURCE", "请指定目录来源", 2);
   let bytes: Uint8Array;
   let identity: string;
   if (/^[a-z][a-z0-9+.-]*:\/\//i.test(location)) {
@@ -61,17 +61,35 @@ export async function loadRegistry(
     if ((await stat(path)).size > maxBytes)
       throw new AppError("SOURCE_TOO_LARGE", "目录超过 2 MB 限制");
     bytes = await readFile(path);
-    identity = source ? path : "bundled";
+    identity = path;
   }
   if (bytes.length > maxBytes)
     throw new AppError("SOURCE_TOO_LARGE", "目录超过 2 MB 限制");
   const hash = sha256(bytes);
   if (expectedSha256 && expectedSha256 !== hash)
     throw new AppError("SOURCE_MISMATCH", "目录摘要与 --source-sha256 不匹配");
-  const data = parseData(
-    registrySchema,
-    parseJson(new TextDecoder("utf-8", { fatal: true }).decode(bytes), "目录"),
+  const data = parseJson(
+    new TextDecoder("utf-8", { fatal: true }).decode(bytes),
     "目录",
   );
   return { data, source: identity, sha256: hash };
+}
+
+export async function loadRegistry(
+  source?: string,
+  expectedSha256?: string,
+  fetcher: typeof fetch = fetch,
+): Promise<LoadedRegistry> {
+  const loaded = await readSource(source, expectedSha256, fetcher);
+  return { ...loaded, data: parseData(registrySchema, loaded.data, "目录") };
+}
+
+export function assetOrigin(registry: LoadedRegistry, key: string) {
+  return (
+    registry.origins?.[key] ?? {
+      version: registry.data.version,
+      source: registry.source,
+      sha256: registry.sha256,
+    }
+  );
 }

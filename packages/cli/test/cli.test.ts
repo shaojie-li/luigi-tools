@@ -1,3 +1,4 @@
+import "./fixtures/setup.js";
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import {
@@ -14,6 +15,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import type { TestContext } from "node:test";
+import { parse } from "yaml";
 import { execute } from "../src/commands.js";
 import { install } from "../src/install.js";
 import { doctor, projectRoot, readManifest } from "../src/project.js";
@@ -56,17 +58,40 @@ await test("list 输出可解析 JSON；未知参数和缺失参数不会等待�
     JSON.parse(listed.stdout).skills.map(
       (skill: { name: string }) => skill.name,
     ),
-    ["web-ui", "forms", "tables", "github-projects"],
+    ["web-ui", "forms", "tables", "github-projects", "profile-web-interaction"],
   );
   for (const args of [
     ["--json"],
-    ["add", "skill", "--agent", "codex", "--json"],
+    ["add", "skill", "--agent", "codex", "--cwd", ".", "--json"],
     ["list", "--wat", "--json"],
   ]) {
     const result = await run(root, args);
     assert.equal(result.code, 2);
     assert.equal(JSON.parse(result.stdout).ok, false);
     assert.equal(result.stderr, "");
+  }
+  assert.deepEqual(await readdir(root), []);
+});
+
+await test("非交互写入缺少 --cwd 时显性失败，JSON 和 dry-run 也不猜测目录", async (t) => {
+  const root = await temp(t);
+  for (const args of [
+    ["init", "business-web", "--agent", "codex", "--json"],
+    ["add", "skill", "forms", "--agent", "codex", "--json"],
+    ["add", "preset", "github-projects", "--json", "--dry-run"],
+    ["add", "ui", "button", "--non-interactive"],
+  ]) {
+    const result = await run(root, args);
+    assert.equal(result.code, 2);
+    if (args.includes("--json")) {
+      const output = JSON.parse(result.stdout);
+      assert.equal(output.error.code, "MISSING_ARGUMENT");
+      assert.match(output.error.message, /--cwd/);
+      assert.equal(result.stderr, "");
+    } else {
+      assert.equal(result.stdout, "");
+      assert.match(result.stderr, /--cwd/);
+    }
   }
   assert.deepEqual(await readdir(root), []);
 });
@@ -80,6 +105,8 @@ await test("完整命令在仓库外安装；重复安装保持 manifest 和文�
     "forms",
     "--agent",
     "codex",
+    "--cwd",
+    ".",
     "--json",
   ];
   assert.equal((await run(root, args)).code, 0);
@@ -114,6 +141,8 @@ await test("dry-run 零写入并展示精确目标", async (t) => {
     "--agent",
     "claude",
     "--dry-run",
+    "--cwd",
+    ".",
     "--json",
   ]);
   assert.equal(result.code, 0);
@@ -250,6 +279,12 @@ await test("交互收集的选择与完整命令执行同一安装逻辑", async
     [],
     { cwd: root },
     {
+      async packageManager() {
+        throw new Error("add 不应询问包管理器");
+      },
+      async writeTarget() {
+        throw new Error("指定 --cwd 时不应询问目录");
+      },
       async action() {
         calls.push("action");
         return "add";
@@ -289,6 +324,12 @@ await test("恰好一个 Agent 配置时可检测；选择中途取消零写入"
       [],
       { cwd: empty },
       {
+        async packageManager() {
+          throw new Error("add 不应询问包管理器");
+        },
+        async writeTarget() {
+          throw new Error("指定 --cwd 时不应询问目录");
+        },
         async action() {
           return "add";
         },
@@ -412,6 +453,11 @@ await test("完整命令可以从指定本地目录快照安装附带资源", as
     content: "资源内容",
     sha256: sha256("资源内容"),
   });
+  registry.skills[0]!.files.push({
+    path: "LICENSE",
+    content: "来源自带的许可声明",
+    sha256: sha256("来源自带的许可声明"),
+  });
   const source = join(sourceRoot, "index.json");
   const payload = JSON.stringify(registry);
   await writeFile(source, payload);
@@ -425,6 +471,8 @@ await test("完整命令可以从指定本地目录快照安装附带资源", as
     source,
     "--source-sha256",
     sha256(payload),
+    "--cwd",
+    ".",
     "--json",
   ]);
   assert.equal(result.code, 0, result.stdout + result.stderr);
@@ -434,6 +482,10 @@ await test("完整命令可以从指定本地目录快照安装附带资源", as
       "utf8",
     ),
     "资源内容",
+  );
+  assert.equal(
+    await readFile(join(root, ".agents/skills/web-ui/LICENSE"), "utf8"),
+    "来源自带的许可声明",
   );
   assert.equal(
     (await readManifest(root)).installations[0]?.sourceSha256,
@@ -470,6 +522,12 @@ await test("init 创建新项目并安装组件、管理预设与四个 Skills",
     JSON.parse(await readFile(join(root, "package.json"), "utf8")).name,
     "business-web",
   );
+  // pnpm 8 rejects a workspace configuration without a non-empty packages field.
+  const workspace = parse(
+    await readFile(join(root, "pnpm-workspace.yaml"), "utf8"),
+  ) as { packages: string[]; allowBuilds: Record<string, boolean> };
+  assert.deepEqual(workspace.packages, ["."]);
+  assert.equal(workspace.allowBuilds.esbuild, true);
   assert.match(
     await readFile(join(root, "src/components/ui/Button.tsx"), "utf8"),
     /@base-ui/,
@@ -479,14 +537,25 @@ await test("init 创建新项目并安装组件、管理预设与四个 Skills",
     /验收标准/,
   );
   const manifest = await readManifest(root);
-  assert.equal(manifest.installations.length, 4);
+  assert.equal(manifest.installations.length, 5);
   assert.equal(manifest.assets.length, 6);
+  assert.ok(!(await readdir(root)).includes("licenses"));
+  for (const record of manifest.installations) {
+    assert.ok(!record.files.some((file) => file.path === "LICENSE"));
+    assert.ok(
+      !(await readdir(join(root, ".agents/skills", record.name))).includes(
+        "LICENSE",
+      ),
+    );
+  }
   assert.equal((await doctor(root)).ok, true);
   const again = await run(root, [
     "init",
     "business-web",
     "--agent",
     "codex",
+    "--cwd",
+    ".",
     "--json",
   ]);
   assert.equal(again.code, 0, again.stdout);
@@ -505,6 +574,8 @@ await test("业务模板遇到现有 package.json 时整批拒绝；不写组件
     "business-web",
     "--agent",
     "codex",
+    "--cwd",
+    ".",
     "--json",
   ]);
   assert.equal(result.code, 1);
@@ -549,6 +620,8 @@ await test("GitHub Projects 预设可独立安装，无需 Agent 或远程凭据
     "add",
     "preset",
     "github-projects",
+    "--cwd",
+    ".",
     "--json",
   ]);
   assert.equal(result.code, 0, result.stdout);
@@ -560,7 +633,14 @@ await test("质量预设可独立安装，保留 package.json 并给出显式设
   const root = await temp(t);
   const original = '{"name":"existing","type":"module"}\n';
   await writeFile(join(root, "package.json"), original);
-  const result = await run(root, ["add", "preset", "code-quality", "--json"]);
+  const result = await run(root, [
+    "add",
+    "preset",
+    "code-quality",
+    "--cwd",
+    ".",
+    "--json",
+  ]);
   assert.equal(result.code, 0, result.stdout);
   assert.equal(await readFile(join(root, "package.json"), "utf8"), original);
   assert.match(
@@ -572,7 +652,14 @@ await test("质量预设可独立安装，保留 package.json 并给出显式设
     /PascalCase/,
   );
   assert.equal((await doctor(root)).ok, true);
-  const again = await run(root, ["add", "preset", "code-quality", "--json"]);
+  const again = await run(root, [
+    "add",
+    "preset",
+    "code-quality",
+    "--cwd",
+    ".",
+    "--json",
+  ]);
   assert.equal(again.code, 0, again.stdout);
   assert.ok(
     JSON.parse(again.stdout).items.every(

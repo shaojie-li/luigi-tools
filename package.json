@@ -8,11 +8,10 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "pnpm registry:build && tsx packages/cli/src/index.ts",
-    "registry:build": "tsx scripts/build-registry.ts",
-    "build": "pnpm registry:build && tsc -p packages/cli/tsconfig.build.json",
+    "dev": "tsx packages/cli/src/index.ts",
+    "build": "tsx scripts/build.ts && tsc -p packages/cli/tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "test": "pnpm registry:build && tsx --test packages/cli/test/*.test.ts scripts/*.test.ts",
+    "test": "tsx --test packages/cli/test/*.test.ts scripts/*.test.ts",
     "smoke": "pnpm build && tsx scripts/smoke.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -20,7 +19,7 @@
     "lint": "eslint --config eslint.config.ts . --max-warnings=0",
     "lint:fix": "eslint --config eslint.config.ts . --fix --max-warnings=0",
     "precommit": "lint-staged && npm run lint && npm run format:check && npm run typecheck",
-    "prepare": "tsx registry/presets/code-quality/tooling/setup-hooks.ts"
+    "prepare": "tsx tooling/setup-hooks.ts"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

@@ -1,68 +1,51 @@
-# Agent Base
+# Luigi Tools
 
-面向开发者和编码 Agent 的可复用工程基建。对外通过 @luigix/tools 提供唯一资产入口，既支持终端交互选择，也支持完整命令和 JSON 输出。
+统一 CLI：按需安装 Skills、UI、工程预设，或组合它们初始化项目。npm 包为 `@luigix/tools`，命令为 `lt`，要求 Node.js 22.13+。
 
-架构基线见 [架构文档](docs/architecture.md)，协议和命令见 [CLI 文档](docs/cli.md)，代码与提交约定见 [编码规范](docs/coding-standards.md)。资产包含 TypeScript CLI、4 个 Skills、3 个 UI 组件、GitHub Projects 和代码质量预设，以及一个 React 业务模板。
+本仓库只维护 CLI。内容源码分别位于：
 
-## 本地开发
-
-要求 Node.js 22.13+，仓库固定 pnpm 版本。已配置 pnpm 时直接使用 pnpm；安装了 Corepack 时也可使用 corepack pnpm。
-
-```bash
-corepack pnpm install
-corepack pnpm build
-node packages/cli/dist/index.js
-```
-
-完整命令示例：
-
-```bash
-node packages/cli/dist/index.js list
-node packages/cli/dist/index.js init business-web --cwd ../my-app --agent codex
-node packages/cli/dist/index.js add skill github-projects --agent codex --cwd ../my-app
-node packages/cli/dist/index.js add ui button --cwd ../my-app
-node packages/cli/dist/index.js add preset github-projects --cwd ../my-app
-node packages/cli/dist/index.js add preset code-quality --cwd ../my-app
-node packages/cli/dist/index.js doctor --cwd ../my-app
-```
-
-init 的新目录父目录必须存在。生成项目后，在该项目内执行 npm install、npm run tooling:setup、npm run dev；模板自带质量工具依赖和脚本，CLI 安装资产时不会执行它们。Git Hook 需要项目已经初始化 Git；稍后初始化 Git 时再次运行 npm run tooling:setup。模板没有服务端或登录，任务数据保存在当前浏览器，供后续接入业务 API。
-
-## 发布后的使用方式
+| 仓库                                                           | 职责                                   |
+| -------------------------------------------------------------- | -------------------------------------- |
+| [luigi-ui](https://github.com/shaojie-li/luigi-ui)             | UI 组件及类型验证                      |
+| [luigi-skills](https://github.com/shaojie-li/luigi-skills)     | Skills、附属资源、脚本及测试           |
+| [luigi-starters](https://github.com/shaojie-li/luigi-starters) | 项目模板、工程预设及固定版本的组合依赖 |
 
 ```bash
 npx @luigix/tools
-npx @luigix/tools init business-web --cwd ./my-app --agent codex
-npm install -g @luigix/tools
-lt list
+npx @luigix/tools list
+npx @luigix/tools add skill profile-web-interaction --agent codex --cwd .
+npx @luigix/tools add ui button --cwd .
+npx @luigix/tools add preset code-quality --cwd .
+npx @luigix/tools init business-web --agent codex --cwd ./my-app --package-manager pnpm
+npx @luigix/tools doctor --cwd .
 ```
 
-以上示例需要先完成 npm 发布。当前可打包后在任意空目录 npm install 本地 tgz，验证和未来公共安装相同的包结构；不需要访问源仓库。
+三个内容仓库及公开索引已推送。以上命令描述本次改造后的 CLI 行为，仍需发布新版 npm 包后供公共用户使用；Git 推送不会自动改变已发布 npm 版本。
 
-## 检查和分发
+CLI 先读取轻量索引，再下载选中资产及其依赖。每个资产独立版本，模板固定依赖版本；修改 Skill 不需要重新发布 CLI。第一次安装需要网络，也可使用本地来源。`doctor` 只检查本地安装记录，离线可用。
+
+支持 `--dry-run`、`--json`、`--non-interactive`、`--source` 和 `--source-sha256`。Skills 安装到项目的 `.agents/skills` 或 `.claude/skills`；项目资产安装到声明的相对路径。不覆盖已有文件，版本或本地内容有差异时停止；安装前校验完整计划，写入失败回滚。复制的源码由项目维护，升级不自动覆盖。
+
+交互终端可补齐目录、Agent、资产与依赖安装选项；非交互写入必须指定 `--cwd`，不会猜测目录或等待输入。`init` 可以选择 npm、pnpm 或暂不安装依赖；失败保留生成项目并报告重试方法。独立 `add` 不执行包管理器。
+
+## 本地开发
 
 ```bash
-corepack pnpm check
-corepack pnpm smoke
+pnpm install --frozen-lockfile
+pnpm check
+pnpm smoke
+pnpm dev -- list --source /path/to/registry/index.json
 ```
 
-smoke 会构建、打包、在临时目录通过 npm 安装 CLI，再初始化模板并安装依赖、测试和构建。它需要联网下载 npm 依赖，不执行发布。
+`--source` 支持 v1 完整快照、v2 单仓索引或 v2 多来源配置。本地联调可设置 `LT_SOURCE`，显式 `--source` 优先。`sources.local.json` 是本机联调文件，不提交、不打包。
 
-编码基线使用 ESLint 10 flat config、typescript-eslint、React Hooks 规则和 Prettier；eslint-config-prettier 关闭格式冲突。组件文件为 PascalCase，职责拆分后的组件放在 lowerCamelCase 同名目录，通过 index.tsx 暴露入口；工具与 Hook 的 .ts 文件为 kebab-case。完整规则和例外见 [编码规范](docs/coding-standards.md)。
+```bash
+LT_SOURCE="$PWD/sources.local.json" pnpm dev -- list
+LT_SOURCE="$PWD/sources.local.json" pnpm smoke
+```
 
-Husky 在提交前格式化暂存文件，再执行全量 lint、格式检查和类型检查；commit-msg 使用 commitlint 校验 Conventional Commits，允许中文描述。CI 独立检查，不能只依赖本地 Hook。React 性能问题通过状态边界审查和 Profiler 验证，不用普遍增加 memo 代替分析。
+单独检出 CLI 就能执行检查，测试不依赖同级内容仓库。`packages/cli/test/fixtures/registry-v1.json` 是冻结的旧协议回归输入，不是资产源码，也不会进入 npm 包。默认 smoke 使用该历史快照；指定 `LT_SOURCE` 后验证真实内容仓库的组合安装、npm/pnpm 依赖安装和模板完整检查。
 
-CLI 运行时依赖仅用于参数、交互与数据验证；源码分发目录由 TypeScript 构建脚本生成，不手工编辑 packages/cli/registry。
+文档：[架构](docs/architecture.md) · [CLI 与来源协议](docs/cli.md) · [拆仓说明](docs/repository-split.md) · [编码规范](docs/coding-standards.md)。
 
-## 扩展资产
-
-- 新 Skill：在 skills/名称/SKILL.md 编写流程，按需添加资源，再登记 skills/catalog.json。
-- 新 UI 或预设：增加源文件并登记 registry/catalog.json；目标路径、依赖和资产组合需明确。
-- 新模板：在 templates 下增加完整项目骨架，通过 requires 引用已有 UI 和预设，避免复制维护。
-- 运行构建、必要测试，并在仓库外通过 CLI 验证。各资产的 npm 依赖保留真实包名；不发明运行时服务或占位凭据。
-
-已有项目可用 `lt add preset code-quality` 安装规范文件，再执行 `npx tsx tooling/setup-project.ts` 安全补齐缺失脚本和开发依赖声明，安装依赖后执行 `npm run tooling:setup`。配置冲突显性报告，不覆盖已有约定；操作步骤见 [CLI 文档](docs/cli.md)。
-
-当前不包含 diff/update、全局 Skills 安装、二进制资产分发、私有源认证或远程 GitHub 操作。这些边界与未来 Web Registry/MCP、移动端方向均记录在架构文档。
-
-本仓库采用 [MIT License](LICENSE)。通过 CLI 安装的 Skills、UI、预设和模板会携带相应版权与许可声明；请在复制和分发时保留。
+MIT License。CLI 包保留许可证，不额外往项目或 Skill 注入许可文件；来源自带的许可文件按原样分发。

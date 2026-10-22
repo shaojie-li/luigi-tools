@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 2,
+  "sources": [
+    {
+      "url": "https://raw.githubusercontent.com/shaojie-li/luigi-skills/main/registry/index.json"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/shaojie-li/luigi-ui/main/registry/index.json"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/shaojie-li/luigi-starters/main/registry/index.json"
+    }
+  ]
+}

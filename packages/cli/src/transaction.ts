@@ -50,6 +50,10 @@ export async function transact<T extends ChangePlan>(
   let failed = false;
   let failure: unknown;
   try {
+    if (!(await statIfExists(root))) {
+      await mkdir(root);
+      dirs.push(root);
+    }
     await ensureDir(root, stateDir, dirs);
     try {
       const lock = await open(lockPath, "wx");

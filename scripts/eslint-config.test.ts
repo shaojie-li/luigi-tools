@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { Linter } from "eslint";
-import { createEslintConfig } from "../registry/presets/code-quality/tooling/eslint-rules.js";
+import { createEslintConfig } from "../tooling/eslint-rules.js";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 // These in-memory fixtures exercise naming and React rules without a TS project.

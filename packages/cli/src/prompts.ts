@@ -3,9 +3,12 @@ import {
   cancel,
   isCancel,
   select,
+  text,
 } from "@clack/prompts";
 import { AppError } from "./errors.js";
-import type { Agent, Asset, Skill } from "./schema.js";
+import type { Agent, PackageManager } from "./schema.js";
+import { validateDirectoryName } from "./write-target.js";
+import type { WriteTargetChoice } from "./write-target.js";
 
 function answer<T>(value: T): Exclude<T, symbol> {
   if (isCancel(value)) {
@@ -16,14 +19,61 @@ function answer<T>(value: T): Exclude<T, symbol> {
 }
 
 export interface Prompts {
+  writeTarget(current: string): Promise<WriteTargetChoice>;
   action(): Promise<"init" | "add" | "list" | "doctor">;
   kind(): Promise<"skill" | "ui" | "preset">;
-  assets(assets: Asset[], single: boolean): Promise<string[]>;
-  skills(skills: Skill[], installed: string[]): Promise<string[]>;
+  assets(
+    assets: { name: string; description: string }[],
+    single: boolean,
+  ): Promise<string[]>;
+  skills(
+    skills: { name: string; description: string }[],
+    installed: string[],
+  ): Promise<string[]>;
   agent(): Promise<Agent>;
+  packageManager(): Promise<PackageManager>;
 }
 
 export const prompts: Prompts = {
+  async packageManager() {
+    return answer(
+      await select({
+        message: "生成项目后如何安装依赖？",
+        options: [
+          { value: "pnpm" as const, label: "pnpm", hint: "运行 pnpm install" },
+          { value: "npm" as const, label: "npm", hint: "运行 npm install" },
+          { value: "none" as const, label: "暂不安装", hint: "仅生成项目文件" },
+        ],
+      }),
+    );
+  },
+  async writeTarget(current) {
+    const mode = answer(
+      await select({
+        message: "在哪里执行操作？",
+        options: [
+          {
+            value: "new" as const,
+            label: "新建文件夹",
+            hint: `位于 ${current} 下`,
+          },
+          {
+            value: "current" as const,
+            label: "在当前文件夹执行",
+            hint: current,
+          },
+        ],
+      }),
+    );
+    if (mode === "current") return { mode };
+    const name = answer(
+      await text({
+        message: `新文件夹名称（位于 ${current} 下）`,
+        validate: (value) => validateDirectoryName(value?.trim()),
+      }),
+    );
+    return { mode, name };
+  },
   async action() {
     return answer(
       await select({

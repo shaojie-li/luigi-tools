@@ -4,6 +4,8 @@ import { AppError } from "./errors.js";
 
 export const agentSchema = z.enum(["codex", "claude"]);
 export type Agent = z.infer<typeof agentSchema>;
+export const packageManagerSchema = z.enum(["npm", "pnpm", "none"]);
+export type PackageManager = z.infer<typeof packageManagerSchema>;
 export const agentPaths: Record<Agent, string> = {
   codex: ".agents/skills",
   claude: ".claude/skills",
@@ -93,7 +95,6 @@ export const registrySchema = z
             .max(100),
         }),
       )
-      .min(1)
       .max(100),
     assets: z.array(assetSchema).max(100).default([]),
   })

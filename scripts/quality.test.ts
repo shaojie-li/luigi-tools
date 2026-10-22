@@ -18,10 +18,7 @@ import { fileURLToPath } from "node:url";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const require = createRequire(import.meta.url);
 const commitlint = require.resolve("@commitlint/cli/cli.js");
-const setupHooks = join(
-  root,
-  "registry/presets/code-quality/tooling/setup-hooks.ts",
-);
+const setupHooks = join(root, "tooling/setup-hooks.ts");
 const checkCommits = join(root, "scripts/check-commits.ts");
 
 function run(
@@ -177,11 +174,11 @@ await test("真实 Husky 钩子运行全量检查、保护部分暂存并校验 
       join(directory, ".husky/commit-msg"),
     );
     await copyFile(
-      join(root, "registry/presets/code-quality/commitlint.config.ts"),
+      join(root, "commitlint.config.ts"),
       join(directory, "commitlint.config.ts"),
     );
     await copyFile(
-      join(root, "registry/presets/code-quality/tooling/commit-rules.ts"),
+      join(root, "tooling/commit-rules.ts"),
       join(directory, "tooling/commit-rules.ts"),
     );
     await writeFile(

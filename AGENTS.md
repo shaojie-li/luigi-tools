@@ -1,8 +1,8 @@
 # 项目约定
 
+- 开始编码或代码评审前，必须先阅读并遵守 [编码与提交规范](docs/coding-standards.md)，其中包含文件命名、组件组织、交互语义与可访问性（a11y）、React 性能、质量检查与提交规则。
 - 默认中文沟通、文档和提交说明。整体方向以 docs/architecture.md 为准。
-- JavaScript 生态代码优先 TypeScript strict，使用 ESM；脚本与测试也使用 TypeScript。
-- 编码、React 与提交规范见 docs/coding-standards.md。组件文件/符号用 PascalCase；拆分后的组件用 lowerCamelCase 同名目录和 index.tsx 公开入口；非组件 .ts 文件用 kebab-case，main.tsx 为启动入口例外。
+- JavaScript 生态代码优先 TypeScript strict，使用 ESM；脚本与测试也使用 TypeScript。Skills、UI、预设和模板源码由各自仓库维护，本仓库只维护 CLI。
 - React 组件按职责和状态归属拆分，高频状态尽量下沉；性能修改先定位和测量，不机械添加 memo 或按行数拆分。
 - 本仓库管理可复用基建，产品业务留在各自仓库。仅创建当前实际需要的模块。
 - CLI 交互层只收集输入，完整命令和交互调用同一套安装、检查逻辑。

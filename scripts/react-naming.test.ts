@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Linter } from "eslint";
 import tseslint from "typescript-eslint";
-import { reactNaming } from "../registry/presets/code-quality/tooling/react-naming.js";
+import { reactNaming } from "../tooling/react-naming.js";
 
 function lint(filename: string, source: string) {
   return new Linter().verify(

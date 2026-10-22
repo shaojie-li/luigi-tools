@@ -1,7 +1,9 @@
 node_modules
 **/dist
-packages/cli/registry
 pnpm-lock.yaml
 **/.husky/_
 **/.agent-base
 **/package-lock.json
+
+packages/cli/test/fixtures/registry-v1.json
+sources.local.json

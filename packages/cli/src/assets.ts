@@ -1,4 +1,4 @@
-import { mkdir, readFile, rmdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { AppError } from "./errors.js";
 import {
   destination,
@@ -8,6 +8,7 @@ import {
   safePath,
   statIfExists,
 } from "./project.js";
+import { assetOrigin } from "./registry.js";
 import type { LoadedRegistry } from "./registry.js";
 import { parseJson } from "./schema.js";
 import type {
@@ -65,13 +66,14 @@ export async function installAssets(
       action: "install" | "unchanged";
     }[] = [];
     for (const asset of assets) {
+      const origin = assetOrigin(registry, `${asset.type}/${asset.name}`);
       const existing = manifest.assets.find(
         (item) => item.type === asset.type && item.name === asset.name,
       );
       if (existing) {
         const issues = await inspectAsset(root, existing);
         if (
-          existing.version !== registry.data.version ||
+          existing.version !== origin.version ||
           issues.length ||
           existing.files.length !== asset.files.length ||
           !existing.files.every((file) =>
@@ -108,9 +110,9 @@ export async function installAssets(
       additions.push({
         type: asset.type,
         name: asset.name,
-        version: registry.data.version,
-        source: registry.source,
-        sourceSha256: registry.sha256,
+        version: origin.version,
+        source: origin.source,
+        sourceSha256: origin.sha256,
         files: asset.files.map(({ path, sha256 }) => ({ path, sha256 })),
       });
       items.push({
@@ -148,12 +150,13 @@ export async function installAssets(
     }
     if (initialize && agent)
       for (const skill of registry.data.skills) {
+        const origin = assetOrigin(registry, `skill/${skill.name}`);
         const record: Installation = {
           name: skill.name,
           agent,
-          version: registry.data.version,
-          source: registry.source,
-          sourceSha256: registry.sha256,
+          version: origin.version,
+          source: origin.source,
+          sourceSha256: origin.sha256,
           files: skill.files.map(({ path, sha256 }) => ({ path, sha256 })),
         };
         const existing = manifest.installations.find(
@@ -199,39 +202,26 @@ export async function installAssets(
       items,
     };
   };
-  // Preview validates the entire plan before even creating a new project directory.
-  await prepare();
-  let createdRoot = false;
-  if (!dryRun && !(await statIfExists(root))) {
-    await mkdir(root);
-    createdRoot = true;
-  }
-  try {
-    const result = await transact(root, prepare, dryRun);
-    return {
-      command: initialize ? "init" : "add",
-      ok: true,
-      root,
-      version: registry.data.version,
-      source: registry.source,
-      sourceSha256: registry.sha256,
-      dryRun,
-      items: result.items,
-      nextSteps: initialize
-        ? [`cd ${JSON.stringify(root)}`, "npm install", "npm run dev"]
-        : assets.some(
-              (asset) =>
-                asset.type === "preset" && asset.name === "code-quality",
-            )
-          ? [
-              "npx --yes --package=tsx@4.23.15 tsx tooling/setup-project.ts",
-              "npm install",
-              "npm run check",
-            ]
-          : [],
-    };
-  } catch (error) {
-    if (createdRoot) await rmdir(root);
-    throw error;
-  }
+  const result = await transact(root, prepare, dryRun);
+  return {
+    command: initialize ? "init" : "add",
+    ok: true,
+    root,
+    version: registry.data.version,
+    source: registry.source,
+    sourceSha256: registry.sha256,
+    dryRun,
+    items: result.items,
+    nextSteps: initialize
+      ? [`cd ${JSON.stringify(root)}`, "npm install", "npm run dev"]
+      : assets.some(
+            (asset) => asset.type === "preset" && asset.name === "code-quality",
+          )
+        ? [
+            "npx --yes --package=tsx@4.23.15 tsx tooling/setup-project.ts",
+            "npm install",
+            "npm run check",
+          ]
+        : [],
+  };
 }

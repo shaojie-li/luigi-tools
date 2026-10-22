@@ -7,6 +7,7 @@ import {
   safePath,
   statIfExists,
 } from "./project.js";
+import { assetOrigin } from "./registry.js";
 import type { LoadedRegistry } from "./registry.js";
 import { transact } from "./transaction.js";
 import type { Agent, Installation } from "./schema.js";
@@ -34,12 +35,13 @@ async function plan(
         `找不到 Skill：${name}。使用 lt list 查看可用名称。`,
         2,
       );
+    const origin = assetOrigin(registry, `skill/${name}`);
     const record: Installation = {
       name,
       agent,
-      version: registry.data.version,
-      source: registry.source,
-      sourceSha256: registry.sha256,
+      version: origin.version,
+      source: origin.source,
+      sourceSha256: origin.sha256,
       files: skill.files.map(({ path, sha256 }) => ({ path, sha256 })),
     };
     const target = destination(record);
