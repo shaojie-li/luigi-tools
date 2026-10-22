@@ -17,7 +17,7 @@ const exec = promisify(execFile);
 const root = fileURLToPath(new URL("../", import.meta.url));
 const source =
   process.env.LT_SOURCE ?? join(root, "test/fixtures/registry-v1.json");
-const staging = await mkdtemp(join(tmpdir(), "agent-base-package-"));
+const staging = await mkdtemp(join(tmpdir(), "luigi-tools-package-"));
 const npm = process.platform === "win32" ? "npm.cmd" : "npm";
 
 async function run(command: string, args: string[], cwd: string) {
@@ -135,6 +135,8 @@ try {
   ) as { ok: boolean };
   assert.equal(report.ok, true);
   assert.ok(!(await readdir(app)).includes("licenses"));
+  assert.ok(!(await readdir(app)).includes(".agent-base"));
+  assert.ok(!(await readdir(app)).includes(".lt-install.lock"));
   for (const skill of [
     "web-ui",
     "forms",

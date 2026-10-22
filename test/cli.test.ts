@@ -18,7 +18,8 @@ import type { TestContext } from "node:test";
 import { parse } from "yaml";
 import { execute } from "../src/commands.js";
 import { install } from "../src/install.js";
-import { doctor, projectRoot, readManifest } from "../src/project.js";
+import { projectRoot } from "../src/project.js";
+import { doctor } from "../src/doctor.js";
 import { loadRegistry } from "../src/registry.js";
 import { parseData, registrySchema, sha256 } from "../src/schema.js";
 import type { Registry } from "../src/schema.js";
@@ -96,7 +97,7 @@ await test("非交互写入缺少 --cwd 时显性失败，JSON 和 dry-run 也�
   assert.deepEqual(await readdir(root), []);
 });
 
-await test("完整命令在仓库外安装；重复安装保持 manifest 和文件内容不变", async (t) => {
+await test("完整命令在仓库外安装；重复安装保持文件内容不变且没有安装记录目录", async (t) => {
   const root = await temp(t);
   const args = [
     "add",
@@ -111,7 +112,7 @@ await test("完整命令在仓库外安装；重复安装保持 manifest 和文�
   ];
   assert.equal((await run(root, args)).code, 0);
   const before = await readFile(
-    join(root, ".agent-base/manifest.json"),
+    join(root, ".agents/skills/web-ui/SKILL.md"),
     "utf8",
   );
   assert.match(
@@ -126,9 +127,10 @@ await test("完整命令在仓库外安装；重复安装保持 manifest 和文�
     ),
   );
   assert.equal(
-    await readFile(join(root, ".agent-base/manifest.json"), "utf8"),
+    await readFile(join(root, ".agents/skills/web-ui/SKILL.md"), "utf8"),
     before,
   );
+  assert.deepEqual(await readdir(root), [".agents"]);
   assert.equal((await doctor(root)).ok, true);
 });
 
@@ -160,7 +162,7 @@ await test("不接管已有目录；多 Skill 冲突时整批不写入", async (
   const registry = await loadRegistry();
   await assert.rejects(
     install(root, registry, ["web-ui", "forms"], "codex"),
-    /不受 CLI 管理/,
+    /元数据/,
   );
   assert.deepEqual(await readdir(join(root, ".agents/skills")), ["forms"]);
   assert.equal(
@@ -170,23 +172,26 @@ await test("不接管已有目录；多 Skill 冲突时整批不写入", async (
   assert.deepEqual(await readdir(root), [".agents"]);
 });
 
-await test("doctor 检测修改、删除和额外文件；add 不覆盖本地修改", async (t) => {
+await test("doctor 检查元数据与缺失入口，同名 Skill 跳过且保留本地定制", async (t) => {
   const root = await temp(t);
   const registry = await loadRegistry();
   await install(root, registry, ["web-ui", "forms"], "codex");
-  await writeFile(join(root, ".agents/skills/web-ui/SKILL.md"), "本地修改");
+  const customized = "---\nname: web-ui\ndescription: 本地定制\n---\n本地修改";
+  await writeFile(join(root, ".agents/skills/web-ui/SKILL.md"), customized);
+  const repeated = await install(root, registry, ["web-ui"], "codex");
+  assert.equal(repeated.items[0]?.action, "unchanged");
   await rm(join(root, ".agents/skills/forms/SKILL.md"));
   await writeFile(join(root, ".agents/skills/forms/local.txt"), "自定义");
   const result = await run(root, ["doctor", "--json"]);
   assert.equal(result.code, 1);
-  const report = JSON.parse(result.stdout);
-  assert.match(JSON.stringify(report), /内容已修改/);
-  assert.match(JSON.stringify(report), /缺少文件/);
-  assert.match(JSON.stringify(report), /额外文件/);
-  await assert.rejects(install(root, registry, ["web-ui"], "codex"), /未覆盖/);
+  assert.match(result.stdout, /缺少 SKILL.md/);
   assert.equal(
     await readFile(join(root, ".agents/skills/web-ui/SKILL.md"), "utf8"),
-    "本地修改",
+    customized,
+  );
+  assert.equal(
+    await readFile(join(root, ".agents/skills/forms/local.txt"), "utf8"),
+    "自定义",
   );
 });
 
@@ -201,25 +206,27 @@ await test("符号链接无法把写入导向项目之外", async (t) => {
   assert.deepEqual(await readdir(outside), []);
 });
 
-await test("非法安装记录拒绝读取外部路径", async (t) => {
+await test("旧安装记录不再读取，不影响实际 Skill 发现", async (t) => {
   const root = await temp(t);
   await mkdir(join(root, ".agent-base"));
   await writeFile(
     join(root, ".agent-base/manifest.json"),
-    JSON.stringify({
-      schemaVersion: 1,
-      installations: [{ name: "../outside" }],
-    }),
+    "invalid historical data",
   );
-  await assert.rejects(doctor(root), /安装记录不合法/);
+  await install(root, await loadRegistry(), ["forms"], "codex");
+  assert.equal((await doctor(root)).ok, true);
+  assert.equal(
+    await readFile(join(root, ".agent-base/manifest.json"), "utf8"),
+    "invalid historical data",
+  );
 });
 
-await test("提交 manifest 失败后回滚整批写入并保留已有记录", async (t) => {
+await test("写入失败后回滚整批新增文件并保留已有 Skill", async (t) => {
   const root = await temp(t);
   const registry = await loadRegistry();
   await install(root, registry, ["web-ui"], "codex");
   const before = await readFile(
-    join(root, ".agent-base/manifest.json"),
+    join(root, ".agents/skills/web-ui/SKILL.md"),
     "utf8",
   );
   await assert.rejects(
@@ -229,9 +236,9 @@ await test("提交 manifest 失败后回滚整批写入并保留已有记录", a
     /模拟磁盘/,
   );
   assert.deepEqual(await readdir(join(root, ".agents/skills")), ["web-ui"]);
-  assert.deepEqual(await readdir(join(root, ".agent-base")), ["manifest.json"]);
+  assert.deepEqual(await readdir(root), [".agents"]);
   assert.equal(
-    await readFile(join(root, ".agent-base/manifest.json"), "utf8"),
+    await readFile(join(root, ".agents/skills/web-ui/SKILL.md"), "utf8"),
     before,
   );
   assert.equal((await doctor(root)).ok, true);
@@ -256,18 +263,14 @@ await test("首次安装失败不留下中间文件或空目录", async (t) => {
 
 await test("安装锁拒绝并发写入且不删除其他进程的锁", async (t) => {
   const root = await temp(t);
-  await mkdir(join(root, ".agent-base"));
-  await writeFile(join(root, ".agent-base/install.lock"), "123");
+  await writeFile(join(root, ".lt-install.lock"), "123");
   await assert.rejects(
     install(root, await loadRegistry(), ["forms"], "codex"),
     /安装锁/,
   );
-  assert.equal(
-    await readFile(join(root, ".agent-base/install.lock"), "utf8"),
-    "123",
-  );
+  assert.equal(await readFile(join(root, ".lt-install.lock"), "utf8"), "123");
   assert.equal((await doctor(root)).ok, false);
-  assert.deepEqual(await readdir(root), [".agent-base"]);
+  assert.deepEqual(await readdir(root), [".lt-install.lock"]);
 });
 
 await test("交互收集的选择与完整命令执行同一安装逻辑", async (t) => {
@@ -308,14 +311,17 @@ await test("交互收集的选择与完整命令执行同一安装逻辑", async
   );
   assert.deepEqual(calls, ["action", "kind", "agent", "skills"]);
   assert.equal(result.ok, true);
-  assert.equal((await readManifest(root)).installations.length, 2);
+  assert.deepEqual(await readdir(join(root, ".claude/skills")), [
+    "forms",
+    "tables",
+  ]);
 });
 
 await test("恰好一个 Agent 配置时可检测；选择中途取消零写入", async (t) => {
   const root = await temp(t);
   await mkdir(join(root, ".claude"));
   await execute("add", "skill", ["forms"], { cwd: root }, undefined);
-  assert.equal((await readManifest(root)).installations[0]?.agent, "claude");
+  assert.ok((await readdir(join(root, ".claude/skills"))).includes("forms"));
   const empty = await temp(t);
   await assert.rejects(
     execute(
@@ -352,19 +358,21 @@ await test("恰好一个 Agent 配置时可检测；选择中途取消零写入"
   assert.deepEqual(await readdir(empty), []);
 });
 
-await test("版本变化通过 add 明确拒绝，不实现隐式升级", async (t) => {
+await test("上游版本或内容变化时同名 Skill 保持不变，不隐式升级", async (t) => {
   const root = await temp(t);
   const registry = await loadRegistry();
   await install(root, registry, ["forms"], "codex");
-  await assert.rejects(
-    install(
-      root,
-      { ...registry, data: { ...registry.data, version: "0.2.0" } },
-      ["forms"],
-      "codex",
-    ),
-    /存在差异/,
-  );
+  const path = join(root, ".agents/skills/forms/SKILL.md");
+  const before = await readFile(path, "utf8");
+  const newer = structuredClone(registry);
+  newer.data.version = "0.2.0";
+  const skill = newer.data.skills.find((item) => item.name === "forms")!;
+  skill.files[0]!.content += "\n新版内容";
+  skill.files[0]!.sha256 = sha256(skill.files[0]!.content);
+  const result = await install(root, newer, ["forms"], "codex");
+  assert.equal(result.items[0]?.action, "unchanged");
+  assert.equal(await readFile(path, "utf8"), before);
+  assert.deepEqual(await readdir(root), [".agents"]);
 });
 
 await test("目录 schema 拒绝穿越、重复、大小写碰撞和摘要篡改", async () => {
@@ -487,10 +495,8 @@ await test("完整命令可以从指定本地目录快照安装附带资源", as
     await readFile(join(root, ".agents/skills/web-ui/LICENSE"), "utf8"),
     "来源自带的许可声明",
   );
-  assert.equal(
-    (await readManifest(root)).installations[0]?.sourceSha256,
-    sha256(payload),
-  );
+  assert.equal(JSON.parse(result.stdout).sourceSha256, sha256(payload));
+  assert.deepEqual(await readdir(root), [".agents"]);
 });
 
 await test("init 创建新项目并安装组件、管理预设与四个 Skills", async (t) => {
@@ -536,18 +542,14 @@ await test("init 创建新项目并安装组件、管理预设与四个 Skills",
     await readFile(join(root, ".github/ISSUE_TEMPLATE/feature.yml"), "utf8"),
     /验收标准/,
   );
-  const manifest = await readManifest(root);
-  assert.equal(manifest.installations.length, 5);
-  assert.equal(manifest.assets.length, 6);
+  const installed = await readdir(join(root, ".agents/skills"));
+  assert.equal(installed.length, 5);
+  assert.ok(!(await readdir(root)).includes(".agent-base"));
   assert.ok(!(await readdir(root)).includes("licenses"));
-  for (const record of manifest.installations) {
-    assert.ok(!record.files.some((file) => file.path === "LICENSE"));
+  for (const name of installed)
     assert.ok(
-      !(await readdir(join(root, ".agents/skills", record.name))).includes(
-        "LICENSE",
-      ),
+      !(await readdir(join(root, ".agents/skills", name))).includes("LICENSE"),
     );
-  }
   assert.equal((await doctor(root)).ok, true);
   const again = await run(root, [
     "init",
@@ -611,7 +613,10 @@ await test("UI 可独立安装；缺依赖时明确报错且零写入", async (t
     installAssets(root, registry, "ui", ["button"], false),
     /未覆盖/,
   );
-  assert.equal((await doctor(root)).ok, false);
+  assert.equal(
+    await readFile(join(root, "src/components/ui/Button.tsx"), "utf8"),
+    "customized",
+  );
 });
 
 await test("GitHub Projects 预设可独立安装，无需 Agent 或远程凭据", async (t) => {
@@ -625,7 +630,7 @@ await test("GitHub Projects 预设可独立安装，无需 Agent 或远程凭据
     "--json",
   ]);
   assert.equal(result.code, 0, result.stdout);
-  assert.equal((await readManifest(root)).installations.length, 0);
+  assert.ok(!(await readdir(root)).includes(".agents"));
   assert.equal((await doctor(root)).ok, true);
 });
 
@@ -680,4 +685,31 @@ await test("远程资产不能写入保留目录，循环依赖在写入前失�
     /循环依赖/,
   );
   assert.deepEqual(await readdir(root), []);
+});
+
+await test("预设部分文件缺失时整批拒绝，不依赖安装记录或补写已有目录", async (t) => {
+  const root = await temp(t);
+  const registry = await loadRegistry();
+  const first = await installAssets(
+    root,
+    registry,
+    "preset",
+    ["github-projects"],
+    false,
+  );
+  assert.ok(first.items.every((item) => item.action === "install"));
+  const asset = registry.data.assets.find(
+    (item) => item.type === "preset" && item.name === "github-projects",
+  )!;
+  const missing = asset.files[0]!.path;
+  await rm(join(root, missing));
+  await assert.rejects(
+    installAssets(root, registry, "preset", ["github-projects"], false),
+    /部分存在/,
+  );
+  await assert.rejects(readFile(join(root, missing)), /ENOENT/);
+  for (const file of asset.files.slice(1))
+    assert.equal(await readFile(join(root, file.path), "utf8"), file.content);
+  assert.ok(!(await readdir(root)).includes(".agent-base"));
+  assert.ok(!(await readdir(root)).includes(".lt-install.lock"));
 });

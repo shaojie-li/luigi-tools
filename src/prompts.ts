@@ -127,7 +127,7 @@ export const prompts: Prompts = {
         options: skills.map((skill) => ({
           value: skill.name,
           label: skill.name,
-          hint: `${installed.includes(skill.name) ? "已有安装记录 · " : ""}${skill.description}`,
+          hint: `${installed.includes(skill.name) ? "已安装同名 Skill · " : ""}${skill.description}`,
         })),
       }),
     );

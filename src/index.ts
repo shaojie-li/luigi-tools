@@ -42,7 +42,10 @@ program
   .name("lt")
   .description("初始化业务项目，安装 Skills、UI 与项目预设")
   .version(metadata.version)
-  .option("--cwd <directory>", "目标目录；写入时省略则交互选择，非交互必须指定")
+  .option(
+    "--cwd <directory>",
+    "目标目录；交互 add 默认当前目录，init 交互选择，非交互必须指定",
+  )
   .option("--agent <agent>", "安装目标：codex 或 claude")
   .option(
     "--package-manager <manager>",
@@ -59,7 +62,7 @@ program
   .action(() => run(undefined));
 program
   .command("list")
-  .description("查看可安装资产和已有安装记录")
+  .description("查看可安装资产和实际 Skill 安装状态")
   .action(() => run("list"));
 program
   .command("init")
@@ -78,7 +81,7 @@ program
   );
 program
   .command("doctor")
-  .description("离线检查本地受管理文件")
+  .description("离线检查 Skill 元数据和安装锁")
   .action(() => run("doctor"));
 
 try {

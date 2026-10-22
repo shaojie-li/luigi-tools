@@ -2,13 +2,9 @@ import { installAssets } from "./assets.js";
 import { installDependencies } from "./dependencies.js";
 import { AppError } from "./errors.js";
 import { install } from "./install.js";
-import {
-  doctor,
-  projectRoot,
-  readManifest,
-  safePath,
-  statIfExists,
-} from "./project.js";
+import { doctor } from "./doctor.js";
+import { discoverSkills } from "./skills.js";
+import { projectRoot, safePath, statIfExists } from "./project.js";
 import type { Prompts } from "./prompts.js";
 import { loadCatalog, latestEntries, materialize } from "./catalog.js";
 import {
@@ -57,7 +53,10 @@ export async function execute(
       : undefined;
   const root =
     command === "init" || command === "add"
-      ? await resolveWriteTarget(options.cwd, ui)
+      ? await resolveWriteTarget(
+          options.cwd ?? (ui && command === "add" ? process.cwd() : undefined),
+          ui,
+        )
       : await projectRoot(options.cwd ?? process.cwd());
   if (command === "doctor") {
     if (
@@ -99,7 +98,10 @@ export async function execute(
   }
   const catalog = await loadCatalog(options.source, options.sourceSha256);
   const entries = latestEntries(catalog);
-  const manifest = await readManifest(root);
+  const localSkills =
+    type === undefined || type === "skill"
+      ? await discoverSkills(root, agent)
+      : [];
   if (type === undefined) {
     return {
       command,
@@ -115,10 +117,7 @@ export async function execute(
           name: asset.name,
           description: asset.description,
           version: asset.version,
-          installed: manifest.assets.some(
-            (record) =>
-              record.type === asset.type && record.name === asset.name,
-          ),
+          installed: null,
         })),
       skills: entries
         .filter((entry) => entry.type === "skill")
@@ -126,16 +125,9 @@ export async function execute(
           name: skill.name,
           description: skill.description,
           version: skill.version,
-          installed: manifest.installations
-            .filter(
-              (record) =>
-                record.name === skill.name &&
-                (!agent || record.agent === agent),
-            )
-            .map((record) => ({
-              agent: record.agent,
-              version: record.version,
-            })),
+          installed: localSkills
+            .filter((local) => local.name === skill.name)
+            .map((local) => ({ agent: local.agent, path: local.path })),
         })),
     };
   }
@@ -205,9 +197,7 @@ export async function execute(
     ? names
     : await requireUi().skills(
         entries.filter((entry) => entry.type === "skill"),
-        manifest.installations
-          .filter((record) => record.agent === agent)
-          .map((record) => record.name),
+        [...new Set(localSkills.map((skill) => skill.name))],
       );
   const registry = await materialize(
     catalog,
@@ -276,7 +266,7 @@ export function render(result: Result): string {
       `可用资产 · ${result.source}`,
       ...result.skills.map(
         (skill) =>
-          `${skill.name}@${skill.version}\t${skill.description}${skill.installed.length ? ` [安装记录：${skill.installed.map((item) => `${item.agent}@${item.version}`).join(", ")}]` : ""}`,
+          `${skill.name}@${skill.version}\t${skill.description}${skill.installed.length ? ` [已安装：${skill.installed.map((item) => item.agent).join(", ")}]` : ""}`,
       ),
       ...(result.assets ?? []).map(
         (asset) =>
@@ -287,14 +277,11 @@ export function render(result: Result): string {
   if (result.command === "doctor" && "checks" in result) {
     return [
       `项目：${result.root}`,
-      ...(!result.initialized ? ["尚无受管理的资产安装记录。"] : []),
+      "检查本地 Skill 元数据和安装锁；不校验历史版本或 UI/预设文件差异。",
       ...result.checks.map(
         (check) =>
-          `${check.ok ? "✓" : "✗"} ${check.name}${check.issues.length ? `\n  ${check.issues.join("\n  ")}` : "：文件完整"}`,
+          `${check.ok ? "✓" : "✗"} ${check.name}${check.issues.length ? `\n  ${check.issues.join("\n  ")}` : "：元数据有效"}`,
       ),
-      ...(result.unmanaged.length
-        ? [`未管理的目录（不修改）：${result.unmanaged.join(", ")}`]
-        : []),
     ].join("\n");
   }
   if ("items" in result) {

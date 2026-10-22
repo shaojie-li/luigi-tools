@@ -1,23 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { AppError } from "./errors.js";
-import {
-  destination,
-  inspectAsset,
-  inspectInstallation,
-  readManifest,
-  safePath,
-  statIfExists,
-} from "./project.js";
-import { assetOrigin } from "./registry.js";
+import { safePath, statIfExists } from "./project.js";
+import { planSkills } from "./install.js";
 import type { LoadedRegistry } from "./registry.js";
 import { parseJson } from "./schema.js";
-import type {
-  Agent,
-  Asset,
-  AssetType,
-  Installation,
-  ProjectAsset,
-} from "./schema.js";
+import type { Agent, Asset, AssetType } from "./schema.js";
 import { transact } from "./transaction.js";
 
 export async function installAssets(
@@ -55,9 +42,6 @@ export async function installAssets(
   for (const name of names) visit(`${type}/${name}`);
   if (!names.length) throw new AppError("MISSING_ASSET", "至少选择一个资产", 2);
   const prepare = async () => {
-    const manifest = await readManifest(root);
-    const additions: ProjectAsset[] = [];
-    const skillAdditions: Installation[] = [];
     const files: { path: string; content: string }[] = [];
     const reserveDirs: string[] = [];
     const items: {
@@ -66,55 +50,47 @@ export async function installAssets(
       action: "install" | "unchanged";
     }[] = [];
     for (const asset of assets) {
-      const origin = assetOrigin(registry, `${asset.type}/${asset.name}`);
-      const existing = manifest.assets.find(
-        (item) => item.type === asset.type && item.name === asset.name,
-      );
-      if (existing) {
-        const issues = await inspectAsset(root, existing);
-        if (
-          existing.version !== origin.version ||
-          issues.length ||
-          existing.files.length !== asset.files.length ||
-          !existing.files.every((file) =>
-            asset.files.some(
-              (next) => file.path === next.path && file.sha256 === next.sha256,
-            ),
-          )
-        )
-          throw new AppError(
-            "CONFLICT",
-            `${asset.type}/${asset.name} 存在版本或本地差异，未覆盖。${issues.join("；")}`,
-          );
-        items.push({
-          name: `${asset.type}/${asset.name}`,
-          target: existing.files.map((file) => file.path).join(", "),
-          action: "unchanged",
-        });
-        continue;
-      }
+      let identical = 0;
       for (const file of asset.files) {
         const path = await safePath(root, file.path);
         if (
-          (await statIfExists(path)) ||
           files.some(
             (entry) => entry.path.toLowerCase() === file.path.toLowerCase(),
           )
         )
-          throw new AppError(
-            "CONFLICT",
-            `文件已存在或资产目标重复，未覆盖：${file.path}`,
-          );
-        files.push({ path: file.path, content: file.content });
+          throw new AppError("CONFLICT", `资产目标重复，未覆盖：${file.path}`);
+        const existing = await statIfExists(path);
+        if (existing) {
+          if (
+            !existing.isFile() ||
+            (await readFile(path, "utf8")) !== file.content
+          )
+            throw new AppError(
+              "CONFLICT",
+              `文件已存在且内容不同，未覆盖：${file.path}`,
+            );
+          identical++;
+        }
       }
-      additions.push({
-        type: asset.type,
-        name: asset.name,
-        version: origin.version,
-        source: origin.source,
-        sourceSha256: origin.sha256,
-        files: asset.files.map(({ path, sha256 }) => ({ path, sha256 })),
-      });
+      if (identical && identical !== asset.files.length)
+        throw new AppError(
+          "CONFLICT",
+          `资产文件仅部分存在，未覆盖：${asset.type}/${asset.name}`,
+        );
+      if (identical === asset.files.length) {
+        items.push({
+          name: `${asset.type}/${asset.name}`,
+          target: asset.files.map((file) => file.path).join(", "),
+          action: "unchanged",
+        });
+        continue;
+      }
+      files.push(
+        ...asset.files.map((file) => ({
+          path: file.path,
+          content: file.content,
+        })),
+      );
       items.push({
         name: `${asset.type}/${asset.name}`,
         target: asset.files.map((file) => file.path).join(", "),
@@ -148,55 +124,23 @@ export async function installAssets(
           `项目缺少组件依赖。先执行 npm install ${missing.map((name) => `${name}@${dependencies[name]}`).join(" ")}，再重试。未写入文件。`,
         );
     }
-    if (initialize && agent)
-      for (const skill of registry.data.skills) {
-        const origin = assetOrigin(registry, `skill/${skill.name}`);
-        const record: Installation = {
-          name: skill.name,
-          agent,
-          version: origin.version,
-          source: origin.source,
-          sourceSha256: origin.sha256,
-          files: skill.files.map(({ path, sha256 }) => ({ path, sha256 })),
-        };
-        const existing = manifest.installations.find(
-          (item) => item.agent === agent && item.name === skill.name,
-        );
-        if (existing) {
-          const issues = await inspectInstallation(root, existing);
-          if (
-            issues.length ||
-            existing.version !== record.version ||
-            existing.files.length !== record.files.length ||
-            !existing.files.every((file) =>
-              record.files.some(
-                (next) =>
-                  file.path === next.path && file.sha256 === next.sha256,
-              ),
-            )
-          )
-            throw new AppError("CONFLICT", `Skill 存在差异：${skill.name}`);
-          continue;
-        }
-        const target = destination(record);
-        if (await statIfExists(await safePath(root, target)))
-          throw new AppError("CONFLICT", `Skill 目录已存在：${target}`);
-        skillAdditions.push(record);
-        reserveDirs.push(target);
-        files.push(
-          ...skill.files.map((file) => ({
-            path: `${target}/${file.path}`,
-            content: file.content,
-          })),
-        );
-        items.push({ name: `skill/${skill.name}`, target, action: "install" });
-      }
+    if (initialize && agent) {
+      const skills = await planSkills(
+        root,
+        registry,
+        registry.data.skills.map((skill) => skill.name),
+        agent,
+      );
+      reserveDirs.push(...skills.reserveDirs);
+      files.push(...skills.files);
+      items.push(
+        ...skills.items.map((item) => ({
+          ...item,
+          name: `skill/${item.name}`,
+        })),
+      );
+    }
     return {
-      manifest: {
-        ...manifest,
-        assets: [...manifest.assets, ...additions],
-        installations: [...manifest.installations, ...skillAdditions],
-      },
       files,
       reserveDirs,
       items,

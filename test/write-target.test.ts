@@ -8,7 +8,8 @@ import type { TestContext } from "node:test";
 import { execute } from "../src/commands.js";
 import { AppError } from "../src/errors.js";
 import { install } from "../src/install.js";
-import { doctor, projectRoot, readManifest } from "../src/project.js";
+import { projectRoot } from "../src/project.js";
+import { doctor } from "../src/doctor.js";
 import type { Prompts } from "../src/prompts.js";
 import { loadRegistry } from "../src/registry.js";
 import { resolveWriteTarget } from "../src/write-target.js";
@@ -36,7 +37,7 @@ function prompts(overrides: Partial<Prompts> = {}): Prompts {
   };
 }
 
-await test("init、Skill、预设与 UI 共用目录选择，当前目录路径完整显示", async (t) => {
+await test("仅 init 询问目录；交互式 add 默认当前目录", async (t) => {
   const root = await temp(t);
   let selections = 0;
   const ui = prompts({
@@ -59,24 +60,19 @@ await test("init、Skill、预设与 UI 共用目录选择，当前目录路径�
     assert.equal(result.root, root);
     assert.equal(result.ok, true);
   }
-  assert.equal(selections, 4);
+  assert.equal(selections, 1);
   assert.equal((await doctor(root)).ok, true);
 });
 
-await test("选择新文件夹后预览零写入；安装 Skill 不附带初始化模板", async (t) => {
+await test("显式指定新目录后预览零写入；安装 Skill 不附带初始化模板", async (t) => {
   const parent = await temp(t);
   const root = join(parent, "my skills");
-  const ui = prompts({
-    async writeTarget(current) {
-      assert.equal(current, parent);
-      return { mode: "new", name: "my skills" };
-    },
-  });
+  const ui = prompts();
   const preview = await execute(
     "add",
     "skill",
     ["forms"],
-    { agent: "codex", dryRun: true },
+    { cwd: root, agent: "codex", dryRun: true },
     ui,
   );
   assert.equal(preview.root, root);
@@ -85,14 +81,14 @@ await test("选择新文件夹后预览零写入；安装 Skill 不附带初始�
     "add",
     "skill",
     ["forms"],
-    { agent: "codex" },
+    { cwd: root, agent: "codex" },
     ui,
   );
   assert.equal(result.root, root);
   assert.ok("replay" in result);
   assert.ok(result.replay.includes(`--cwd '${root}'`));
-  assert.deepEqual(await readdir(root), [".agent-base", ".agents"]);
-  assert.equal((await readManifest(root)).assets.length, 0);
+  assert.deepEqual(await readdir(root), [".agents"]);
+  assert.deepEqual(await readdir(join(root, ".agents/skills")), ["forms"]);
   assert.equal((await doctor(root)).ok, true);
 });
 
@@ -120,10 +116,40 @@ await test("只读命令默认当前目录，不询问或创建目录", async (t
   assert.deepEqual(await readdir(root), []);
 });
 
-await test("目录选择或后续选择取消均不创建新文件夹", async (t) => {
+await test("交互式 lt 添加 Skill 不询问目录，预览零写入", async (t) => {
+  const root = await temp(t);
+  const result = await execute(
+    undefined,
+    undefined,
+    [],
+    { dryRun: true },
+    prompts({
+      async action() {
+        return "add";
+      },
+      async kind() {
+        return "skill";
+      },
+      async agent() {
+        return "codex";
+      },
+      async skills() {
+        return ["forms"];
+      },
+    }),
+  );
+  assert.equal(result.root, root);
+  assert.ok("items" in result);
+  assert.deepEqual(result.items, [
+    { name: "forms", target: ".agents/skills/forms", action: "install" },
+  ]);
+  assert.deepEqual(await readdir(root), []);
+});
+
+await test("add 的 Agent 或 Skill 选择取消均零写入", async (t) => {
   const root = await temp(t);
   const cancelled = new AppError("CANCELLED", "用户取消", 130);
-  for (const stage of ["directory", "agent", "skills"]) {
+  for (const stage of ["agent", "skills"]) {
     await assert.rejects(
       execute(
         "add",
@@ -131,10 +157,6 @@ await test("目录选择或后续选择取消均不创建新文件夹", async (t
         [],
         {},
         prompts({
-          async writeTarget() {
-            if (stage === "directory") throw cancelled;
-            return { mode: "new", name: "new-project" };
-          },
           async agent() {
             if (stage === "agent") throw cancelled;
             return "codex";
@@ -148,6 +170,26 @@ await test("目录选择或后续选择取消均不创建新文件夹", async (t
     );
     assert.deepEqual(await readdir(root), []);
   }
+});
+
+await test("init 的目录选择取消时零写入", async (t) => {
+  const root = await temp(t);
+  const cancelled = new AppError("CANCELLED", "用户取消", 130);
+  await assert.rejects(
+    execute(
+      "init",
+      "template",
+      [],
+      {},
+      prompts({
+        async writeTarget() {
+          throw cancelled;
+        },
+      }),
+    ),
+    (error: unknown) => error === cancelled,
+  );
+  assert.deepEqual(await readdir(root), []);
 });
 
 await test("新文件夹名称拒绝路径穿越和已有目录，不改动已有文件", async (t) => {

@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { loadCatalog, materialize, latestEntries } from "../src/catalog.js";
 import { installAssets } from "../src/assets.js";
-import { doctor, projectRoot, readManifest } from "../src/project.js";
+import { projectRoot } from "../src/project.js";
+import { doctor } from "../src/doctor.js";
 import { execute } from "../src/commands.js";
 import { sha256 } from "../src/schema.js";
 import type { CatalogEntry } from "../src/catalog.js";
@@ -114,7 +115,7 @@ await test("list 只读取轻量索引；选择一个 UI 只下载该资产，�
   assert.equal(registry.data.assets.length, 1);
 });
 
-await test("模板跨来源固定旧版本；新版本独立发布不会改变模板依赖；逐资产记录来源", async (t) => {
+await test("模板跨来源固定旧版本；新版本独立发布不会改变模板依赖；按实际文件安装精确依赖", async (t) => {
   const f = fixture();
   const old = f.add("ui", "button", "1.0.0");
   f.add("ui", "button", "2.0.0");
@@ -135,12 +136,13 @@ await test("模板跨来源固定旧版本；新版本独立发布不会改变�
   await installAssets(root, registry, "template", ["app"], true, "codex");
   assert.deepEqual(await readdir(root), []);
   await installAssets(root, registry, "template", ["app"], false, "codex");
-  const manifest = await readManifest(root);
-  assert.equal(manifest.installations.length, 1);
-  assert.equal(manifest.installations[0]?.version, "3.0.0");
-  assert.equal(manifest.installations[0]?.sourceSha256, skill.sha256);
-  assert.equal(manifest.assets.find((e) => e.type === "ui")?.version, "1.0.0");
-  assert.equal(manifest.assets.find((e) => e.type === "ui")?.source, old.url);
+  assert.deepEqual(await readdir(root), [".agents", "app.txt", "button.txt"]);
+  assert.equal(registry.origins?.["skill/forms"]?.sha256, skill.sha256);
+  assert.equal(registry.origins?.["ui/button"]?.source, old.url);
+  assert.equal(
+    await readFile(join(root, "button.txt"), "utf8"),
+    "button@1.0.0",
+  );
   assert.equal((await doctor(root)).ok, true);
   const again = await installAssets(
     root,

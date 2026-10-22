@@ -1,12 +1,5 @@
 import assert from "node:assert/strict";
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  readdir,
-  rename,
-  rm,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -14,7 +7,6 @@ import { transact } from "../src/transaction.js";
 import type { ChangePlan } from "../src/transaction.js";
 
 const plan: ChangePlan = {
-  manifest: { schemaVersion: 1, installations: [], assets: [] },
   files: [
     { path: "assets/other.txt", content: "other" },
     { path: "assets/blocked.txt", content: "blocked" },
@@ -24,14 +16,16 @@ const plan: ChangePlan = {
 
 await test("安装失败和清理失败同时保留，单个回滚失败不妨碍其余清理", async () => {
   const root = await mkdtemp(join(tmpdir(), "luigi-transaction-cleanup-"));
-  const failure = new Error("模拟 manifest 提交失败");
+  const failure = new Error("模拟文件写入失败");
   try {
     await assert.rejects(
       transact(
         root,
         () => Promise.resolve(plan),
         false,
-        async () => {
+        async (handle, content) => {
+          await handle.writeFile(content);
+          if (content !== "blocked") return;
           // Replace one created file with a directory to cause a real, portable rm failure.
           await rm(join(root, "assets/blocked.txt"));
           await mkdir(join(root, "assets/blocked.txt"));
@@ -43,7 +37,7 @@ await test("安装失败和清理失败同时保留，单个回滚失败不妨�
         assert.equal(error.cause, failure);
         assert.equal(error.errors[0], failure);
         assert.equal(error.errors.length, 2);
-        assert.match(error.message, /模拟 manifest 提交失败/);
+        assert.match(error.message, /模拟文件写入失败/);
         assert.match(error.message, /回滚或清理失败/);
         assert.match(error.message, /blocked\.txt/);
         return true;
@@ -57,7 +51,7 @@ await test("安装失败和清理失败同时保留，单个回滚失败不妨�
   }
 });
 
-await test("提交完成后清理失败显性报告，同时保留已提交的文件和 manifest", async () => {
+await test("写入完成后清理失败显性报告，同时保留已写入的文件", async () => {
   const root = await mkdtemp(join(tmpdir(), "luigi-transaction-committed-"));
   try {
     await assert.rejects(
@@ -65,10 +59,11 @@ await test("提交完成后清理失败显性报告，同时保留已提交的�
         root,
         () => Promise.resolve(plan),
         false,
-        async (from, to) => {
-          await rename(from, to);
-          await rm(join(root, ".agent-base/install.lock"));
-          await mkdir(join(root, ".agent-base/install.lock"));
+        async (handle, content) => {
+          await handle.writeFile(content);
+          if (content !== "blocked") return;
+          await rm(join(root, ".lt-install.lock"));
+          await mkdir(join(root, ".lt-install.lock"));
         },
       ),
       (error: unknown) => {
@@ -87,16 +82,7 @@ await test("提交完成后清理失败显性报告，同时保留已提交的�
       await readFile(join(root, "assets/blocked.txt"), "utf8"),
       "blocked",
     );
-    assert.deepEqual(
-      JSON.parse(
-        await readFile(join(root, ".agent-base/manifest.json"), "utf8"),
-      ),
-      plan.manifest,
-    );
-    assert.deepEqual(await readdir(join(root, ".agent-base")), [
-      "install.lock",
-      "manifest.json",
-    ]);
+    assert.deepEqual(await readdir(root), [".lt-install.lock", "assets"]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

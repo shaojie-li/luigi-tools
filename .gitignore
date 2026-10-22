@@ -2,7 +2,6 @@ node_modules/
 dist/
 *.tgz
 .DS_Store
-.agent-base/install.lock
-.agent-base/manifest.tmp
+.lt-install.lock
 **/.husky/_/
 sources.local.json

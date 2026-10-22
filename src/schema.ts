@@ -141,7 +141,7 @@ export const registrySchema = z
             message: `摘要不匹配：${key}/${file.path}`,
           });
         if (
-          /^(?:\.git|\.agent-base|node_modules|\.agents|\.claude)(?:\/|$)/i.test(
+          /^(?:\.git|\.lt-install\.lock|node_modules|\.agents|\.claude)(?:\/|$)/i.test(
             file.path,
           )
         )
@@ -158,45 +158,9 @@ export const registrySchema = z
       }
   });
 
-export const installationSchema = z.strictObject({
-  name,
-  agent: agentSchema,
-  version,
-  source: z.string().min(1),
-  sourceSha256: digest,
-  files: filesSchema,
-});
-export const projectAssetSchema = z.strictObject({
-  type: assetTypeSchema,
-  name,
-  version,
-  source: z.string().min(1),
-  sourceSha256: digest,
-  files: projectFilesSchema,
-});
-export const manifestSchema = z
-  .strictObject({
-    schemaVersion: z.literal(1),
-    installations: z.array(installationSchema),
-    assets: z.array(projectAssetSchema).default([]),
-  })
-  .superRefine((manifest, ctx) => {
-    const keys = manifest.installations.map(
-      (item) => `${item.agent}/${item.name}`,
-    );
-    if (new Set(keys).size !== keys.length)
-      ctx.addIssue({ code: "custom", message: "安装记录重复" });
-    const assets = manifest.assets.map((item) => `${item.type}/${item.name}`);
-    if (new Set(assets).size !== assets.length)
-      ctx.addIssue({ code: "custom", message: "资产记录重复" });
-  });
-
 export type Registry = z.infer<typeof registrySchema>;
 export type Skill = Registry["skills"][number];
-export type Manifest = z.infer<typeof manifestSchema>;
-export type Installation = z.infer<typeof installationSchema>;
 export type Asset = Registry["assets"][number];
-export type ProjectAsset = z.infer<typeof projectAssetSchema>;
 export type AssetType = z.infer<typeof assetTypeSchema>;
 
 export function sha256(value: string | Uint8Array): string {

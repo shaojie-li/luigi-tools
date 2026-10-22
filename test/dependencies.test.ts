@@ -18,7 +18,8 @@ import type { TestContext } from "node:test";
 import { fileURLToPath } from "node:url";
 import { execute, render } from "../src/commands.js";
 import { AppError } from "../src/errors.js";
-import { doctor, projectRoot } from "../src/project.js";
+import { projectRoot } from "../src/project.js";
+import { doctor } from "../src/doctor.js";
 import type { Prompts } from "../src/prompts.js";
 import { loadRegistry } from "../src/registry.js";
 import { sha256 } from "../src/schema.js";
@@ -40,7 +41,7 @@ async function fixture(t: TestContext, exitCode = 0) {
 import { existsSync, writeFileSync } from "node:fs";
 writeFileSync("install-call.json", JSON.stringify({
   manager: ${JSON.stringify(manager)}, args: process.argv.slice(2), cwd: process.cwd(),
-  generated: existsSync(".agent-base/manifest.json"),
+  generated: existsSync("package.json") && existsSync(".agents/skills/web-ui/SKILL.md"),
 }));
 console.log("package-manager stdout");
 console.error("package-manager stderr");
@@ -186,11 +187,7 @@ await test("dry-run 不执行包管理器、不创建项目；none 和非交互�
       status: "skipped",
     });
     assert.equal(result.stderr, "");
-    assert.deepEqual(await readdir(root), [
-      ".agent-base",
-      ".agents",
-      "package.json",
-    ]);
+    assert.deepEqual(await readdir(root), [".agents", "package.json"]);
   }
 });
 

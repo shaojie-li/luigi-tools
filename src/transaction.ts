@@ -1,19 +1,15 @@
-import {
-  mkdir,
-  mkdtemp,
-  open,
-  rename,
-  rm,
-  rmdir,
-  writeFile,
-} from "node:fs/promises";
-import { dirname, join, relative } from "node:path";
+import { mkdir, open, rm, rmdir } from "node:fs/promises";
+import { dirname, relative } from "node:path";
 import { AppError, isErrno } from "./errors.js";
 import { safePath, statIfExists } from "./project.js";
-import type { Manifest } from "./schema.js";
+import type { FileHandle } from "node:fs/promises";
+
+export type WriteContent = (
+  handle: FileHandle,
+  content: string,
+) => Promise<void>;
 
 export interface ChangePlan {
-  manifest: Manifest;
   files: { path: string; content: string }[];
   reserveDirs: string[];
 }
@@ -35,16 +31,14 @@ export async function transact<T extends ChangePlan>(
   root: string,
   prepare: () => Promise<T>,
   dryRun = false,
-  commitManifest: typeof rename = rename,
+  writeContent: WriteContent = (handle, content) => handle.writeFile(content),
 ): Promise<T> {
   const initial = await prepare();
   if (dryRun || !initial.files.length) return initial;
   const dirs: string[] = [];
   const files: string[] = [];
-  const stateDir = await safePath(root, ".agent-base");
-  const lockPath = await safePath(root, ".agent-base/install.lock");
+  const lockPath = await safePath(root, ".lt-install.lock");
   let locked = false;
-  let stage: string | undefined;
   let committed = false;
   let current = initial;
   let failed = false;
@@ -54,7 +48,6 @@ export async function transact<T extends ChangePlan>(
       await mkdir(root);
       dirs.push(root);
     }
-    await ensureDir(root, stateDir, dirs);
     try {
       const lock = await open(lockPath, "wx");
       locked = true;
@@ -73,12 +66,6 @@ export async function transact<T extends ChangePlan>(
     }
     current = await prepare();
     if (current.files.length) {
-      stage = await mkdtemp(join(stateDir, "stage-"));
-      await writeFile(
-        join(stage, "manifest.json"),
-        `${JSON.stringify(current.manifest, null, 2)}\n`,
-        { flag: "wx" },
-      );
       for (const directory of current.reserveDirs) {
         const target = await safePath(root, directory);
         await ensureDir(root, dirname(target), dirs);
@@ -91,15 +78,11 @@ export async function transact<T extends ChangePlan>(
         const handle = await open(path, "wx");
         files.push(path);
         try {
-          await handle.writeFile(file.content);
+          await writeContent(handle, file.content);
         } finally {
           await handle.close();
         }
       }
-      await commitManifest(
-        join(stage, "manifest.json"),
-        await safePath(root, ".agent-base/manifest.json"),
-      );
       committed = true;
     }
   } catch (error) {
@@ -119,10 +102,6 @@ export async function transact<T extends ChangePlan>(
     for (const file of files.reverse()) {
       await cleanup(() => rm(file));
     }
-  }
-  if (stage) {
-    const stageDirectory = stage;
-    await cleanup(() => rm(stageDirectory, { recursive: true, force: true }));
   }
   if (locked) await cleanup(() => rm(lockPath));
   for (const dir of [...dirs].reverse()) {
