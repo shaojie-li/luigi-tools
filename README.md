@@ -20,13 +20,20 @@ npx @luigix/tools init business-web --agent codex --cwd ./my-app --package-manag
 npx @luigix/tools doctor --cwd .
 ```
 
-三个内容仓库及公开索引已推送。CLI 配置了 main 分支自动发布：npm Trusted Publisher 完成绑定后，push main 通过检查且包含需发布的提交时，自动发布新版 npm 包。公共用户获得的行为以已发布 npm 版本为准。首次启用步骤见 [发布说明](docs/releasing.md)。
+三个内容仓库及公开索引已推送，拆仓后的 CLI 已随 [1.0.0](https://github.com/shaojie-li/luigi-tools/releases/tag/v1.0.0) 发布。npm Trusted Publisher 已绑定并通过实际发布验证；此后 push main 通过检查且包含需发布的提交时，自动计算版本、发布 npm 包并创建 GitHub Release。版本规则和失败恢复见 [发布说明](docs/releasing.md)。
 
-CLI 先读取轻量索引，再下载选中资产及其依赖。每个资产独立版本，模板固定依赖版本；修改 Skill 不需要重新发布 CLI。第一次安装需要网络，也可使用本地来源。`doctor` 只检查本地安装记录，离线可用。
+使用最新版可运行 `npx @luigix/tools@latest`。需要全局安装或升级时：
 
-支持 `--dry-run`、`--json`、`--non-interactive`、`--source` 和 `--source-sha256`。Skills 安装到项目的 `.agents/skills` 或 `.claude/skills`；项目资产安装到声明的相对路径。不覆盖已有文件，版本或本地内容有差异时停止；安装前校验完整计划，写入失败回滚。复制的源码由项目维护，升级不自动覆盖。
+```bash
+npm install -g @luigix/tools@latest
+lt --version
+```
 
-交互终端可补齐目录、Agent、资产与依赖安装选项；非交互写入必须指定 `--cwd`，不会猜测目录或等待输入。`init` 可以选择 npm、pnpm 或暂不安装依赖；失败保留生成项目并报告重试方法。独立 `add` 不执行包管理器。
+CLI 先读取轻量索引，再下载选中资产及其依赖。每个资产独立版本，模板固定依赖版本；修改 Skill 不需要重新发布 CLI。第一次安装需要网络，也可使用本地来源。`doctor` 检查本地 Skill 元数据与临时安装锁，离线可用。
+
+支持 `--dry-run`、`--json`、`--non-interactive`、`--source` 和 `--source-sha256`。Skills 安装到项目的 `.agents/skills` 或 `.claude/skills`；项目资产安装到声明的相对路径。列表和菜单按 `SKILL.md` 的 name 识别已有 Skill，同名已存在就跳过。UI/预设全部文件一致时跳过，部分存在或内容不同时停止。不创建 `.agent-base` 或其他持久安装记录；doctor 只检查本地 Skill 元数据和临时安装锁。安装前校验完整计划，写入失败回滚。复制的源码由项目维护，升级不自动覆盖。
+
+交互式 `add` 默认在当前目录添加资产，不询问目录；`init` 保留新建或使用当前目录的选择。交互终端可补齐 Agent、资产与依赖安装选项；非交互写入必须指定 `--cwd`，不会猜测目录或等待输入。`init` 可以选择 npm、pnpm 或暂不安装依赖；失败保留生成项目并报告重试方法。独立 `add` 不执行包管理器。
 
 ## 本地开发
 
@@ -48,6 +55,6 @@ LT_SOURCE="$PWD/sources.local.json" pnpm smoke
 
 单独检出 CLI 就能执行检查，测试不依赖同级内容仓库。`test/fixtures/registry-v1.json` 是冻结的旧协议回归输入，不是资产源码，也不会进入 npm 包。默认 smoke 使用该历史快照；指定 `LT_SOURCE` 后验证真实内容仓库的组合安装、npm/pnpm 依赖安装和模板完整检查。
 
-文档：[架构](docs/architecture.md) · [CLI 与来源协议](docs/cli.md) · [拆仓说明](docs/repository-split.md) · [编码规范](docs/coding-standards.md)。
+文档：[架构](docs/architecture.md) · [CLI 与来源协议](docs/cli.md) · [拆仓说明](docs/repository-split.md) · [发布说明](docs/releasing.md) · [编码规范](docs/coding-standards.md) · [验证记录](docs/validation.md)。
 
 MIT License。CLI 包保留许可证，不额外往项目或 Skill 注入许可文件；来源自带的许可文件按原样分发。

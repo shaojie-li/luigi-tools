@@ -1,6 +1,16 @@
 # 仓库拆分与维护
 
-本次将当前工作区中的内容迁移到同级的 luigi-ui、luigi-skills、luigi-starters。迁移包含已有未提交文件；原仓库的 Git 暂存区未修改。新目录各自是独立仓库；CLI 仓库也已扁平化为单包项目。
+拆仓已完成：CLI 和内容分别由 luigi-tools、luigi-ui、luigi-skills、luigi-starters 四个独立仓库维护。CLI 仓库已扁平化为单包项目，并发布 `@luigix/tools@1.0.0`。本机将关联仓库集中放在 `~/codingSpace/luigi-infra/`，该父目录只是组织目录，不是 pnpm workspace：
+
+```text
+luigi-infra/
+├── luigi-tools/     CLI，根目录 src 和 package.json
+├── luigi-ui/        UI 组件
+├── luigi-skills/    Skills 与附属资源
+└── luigi-starters/  模板和工程预设
+```
+
+目录位置不影响远程安装，各仓库仍可独立克隆。历史迁移对应关系：
 
 | 原位置                                     | 新位置                                      |
 | ------------------------------------------ | ------------------------------------------- |
@@ -44,7 +54,7 @@ LT_SOURCE="$PWD/sources.local.json" pnpm dev -- list
 LT_SOURCE="$PWD/sources.local.json" pnpm smoke
 ```
 
-所有仓库可单独安装依赖和检查。CLI 默认来源指向各仓库的 main/registry/index.json；远程仓库尚未推送分发文件时，默认在线安装会显性失败，使用本地来源完成联调。不能将本地验证表述成公开端点已经可用。
+所有仓库可单独安装依赖和检查。CLI 默认来源指向各仓库的 main/registry/index.json，公开索引和快照已推送并通过真实安装验证。尚未推送的新资产使用本地来源联调；完成本地验证后仍需验证公开端点。
 
 ## 发布后的版本选择
 

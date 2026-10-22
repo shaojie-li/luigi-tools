@@ -15,6 +15,12 @@
 
 PR 和 fork 不运行 release job。普通检查仅有 `contents: read`；发布任务单独获得 `contents: write` 和 `id-token: write`。不使用 `pull_request_target`，不自动评论 Issue/PR，不向 main 推送版本更新提交。
 
+## 使用 release-with-codex
+
+明确要求提交并发布时，默认纳入目标仓库全部未忽略改动，包括已暂存、未暂存、部分暂存、未跟踪、删除文件，以及文档和测试。已有暂存边界不作为再次确认的理由；用户明确限定范围时遵循限定。
+
+独立意图可拆成本地提交，分别由 GPT-6 Luna 审查，但所有改动提交完成、Git 工作区干净后才统一普通 push 一次。现有 CI 根据整批提交的最高影响决定一个版本，文档和测试即使不触发版本也必须一起推送，不单独补推。Hook 产生的新内容须审查并提交，不能使用 stash、忽略规则或删除文件掩盖剩余改动。
+
 ## 自动版本规则
 
 `.releaserc.json` 为提交分析和发布说明统一使用 `conventionalcommits` preset。当前固定使用与发布说明插件兼容的 9.3.1；升级时必须验证发布说明渲染，不能只验证版本计算。版本规则：
@@ -28,13 +34,13 @@ PR 和 fork 不运行 release job。普通检查仅有 `contents: read`；发布
 
 多个提交采用最高升级级别。不要把实际面向用户的修复写成 `chore:`，否则可能不会发布。`0.x` 同样遵循这些规则，不兼容变更会提升到 `1.0.0`。
 
-接入时 npm 最新版本和已有 Git tag 分别为 `0.1.0`、`v0.1.0`。该 tag 之后已有 `feat(cli)!: 拆分资产仓库并支持按需远程安装`，所以下一次发布预期为 `1.0.0`，无需重打初始 tag。
+2026-10-22 已从 `0.1.0` 自动发布 [1.0.0](https://github.com/shaojie-li/luigi-tools/releases/tag/v1.0.0)，升级原因是拆仓提交声明了不兼容变更。以 `1.0.0` 为基线，后续只有 `fix:` 时发布 `1.0.1`，有 `feat:` 时发布 `1.1.0`，有不兼容变更时发布 `2.0.0`；仅文档等无发布变更的提交不会新增版本。
 
 版本以 npm 和 Git tag 为准。semantic-release 只更新 CI 工作区内待发布包的版本，不回写源码仓库的 `package.json`，不生成需要回提交的 CHANGELOG。源代码中的开发版本可能保持 `0.1.0`；安装后的 `lt --version` 读取发布包的真实版本。仓库只有根目录这一个 package，开发与发布共用同一份元信息。
 
 ## 首次启用
 
-npm 上已有该包，不需要重新进行首包发布。在 npm 登录拥有 `@luigix/tools` 管理权限的账号，进入包 Settings → Trusted Publisher，选择 GitHub Actions，填写：
+本仓库已完成 npm Trusted Publisher 绑定，并通过 `1.0.0` 的 OIDC 发布验证，日常 push 无需重新绑定或本机 npm 登录。以下配置供核对或重建绑定时使用：在 npm 登录拥有 `@luigix/tools` 管理权限的账号，进入包 Settings → Trusted Publisher，选择 GitHub Actions，填写：
 
 | 字段                 | 值                                         |
 | -------------------- | ------------------------------------------ |
@@ -53,8 +59,27 @@ npm 上已有该包，不需要重新进行首包发布。在 npm 登录拥有 `
 
 提交前运行 `pnpm check`、`pnpm smoke`。版本回归测试在临时 Git 仓库中使用真实 semantic-release dry-run，覆盖 patch、minor、两种 major 写法、无发布变更，以及发布说明生成和不兼容变更提示；不会访问 npm 或 GitHub，也不会创建发布 tag。smoke 校验已安装命令的版本与打包元数据一致，不再硬编码版本号。
 
-检查失败时先修复检查；认证失败时核对 npm 绑定的 owner、仓库、workflow 文件名。修复外部配置后可在 GitHub Actions 重跑失败任务，不需要为重试手动增加版本号。
+检查失败时先修复检查；认证失败时核对 npm 绑定的 owner、仓库、workflow 文件名和直接发布权限，并检查 [npm 服务状态](https://status.npmjs.org/)。OIDC token 交换成功不等于包已发布成功，必须继续确认 npm 上传结果。
 
-npm、Git tag 和 GitHub Release 不是一个原子事务。若发布中途失败，先核对三者状态，再决定重试或补齐 Release；不要删除已有发布 tag 或强行覆盖 npm 版本。已公开的版本出现代码问题时，用新的 `fix:` 提交发布修复。
+npm、Git tag 和 GitHub Release 不是一个原子事务。恢复前核对目标版本、标签对应的提交、Release 和运行中的任务，再按实际状态处理：
+
+| 状态                                                | 恢复方式                                                                                                                                                                                              |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 尚未创建目标 tag，npm 也没有目标版本                | 修复原因后重跑原工作流的失败任务，无需手动增加版本号。                                                                                                                                                |
+| 目标 tag 已创建，npm 没有该版本，且没有对应 Release | 不能直接重跑：semantic-release 可能把该 tag 作为已完成发布。确认该标签仅由本次失败运行生成、没有运行中的发布或后续版本依赖它后，记录原 SHA，以预期 SHA 保护删除远程失败标签，再重跑原提交的失败任务。 |
+| npm 已有目标版本，GitHub Release 缺失               | 保留 npm 版本和 tag，核对发布内容及原提交后补齐 GitHub Release，不再次 npm publish。                                                                                                                  |
+| npm 和 GitHub Release 均已存在                      | 验证安装结果；已公开的代码问题通过新的 `fix:` 提交发布修复。                                                                                                                                          |
+
+不要删除已成功发布的标签或尝试覆盖 npm 版本。若后续提交或版本已依赖失败标签，不套用撤销标签的步骤，应保留历史并单独制定补发方案。
+
+发布命令成功后，核对 npm 的目标版本及 `latest`、GitHub Release，并在仓库外执行 CLI。例如验证 `1.0.0`：
+
+```bash
+npm view @luigix/tools version dist-tags --registry=https://registry.npmjs.org
+gh release view v1.0.0 --repo shaojie-li/luigi-tools
+npm exec --yes --package=@luigix/tools@1.0.0 -- lt --version
+```
+
+公开查询可能短暂返回旧数据；此时等待并重新查询，不重复上传或删除标签。`1.0.0` 已完成上述验证，记录见 [验证记录](validation.md#2026-10-22单包结构与自动发布验证)。
 
 参考：[semantic-release GitHub Actions](https://semantic-release.org/recipes/ci-configurations/github-actions/)、[npm Trusted Publishing](https://docs.npmjs.com/trusted-publishers/)。
