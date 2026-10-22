@@ -1,6 +1,6 @@
 {
   "name": "@luigix/tools",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "初始化业务项目，分发 Skills、UI 组件与项目管理预设",
   "publishConfig": {
     "access": "public"
