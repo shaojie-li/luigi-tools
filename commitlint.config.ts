@@ -1,3 +1,1 @@
-import { commitRules } from "./tooling/commit-rules.js";
-
-export default commitRules;
+export { commitRules as default } from "./tooling/commit-rules.ts";
