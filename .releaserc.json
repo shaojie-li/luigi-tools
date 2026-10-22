@@ -17,6 +17,13 @@
     ],
     "@semantic-release/npm",
     [
+      "@semantic-release/git",
+      {
+        "assets": ["package.json"],
+        "message": "chore(release): 同步版本 ${nextRelease.version} [skip ci]"
+      }
+    ],
+    [
       "@semantic-release/github",
       {
         "successComment": false,
